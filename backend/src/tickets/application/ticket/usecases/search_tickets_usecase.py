@@ -56,7 +56,7 @@ class SearchTicketsUseCase(SearchTicketsUseCaseInterface):
             reverse=request.direction is SortDirection.DESC,
         )
         page = ordered[request.offset : request.offset + request.limit]
-        return SearchTicketsResponse(tickets=page, total_elements=len(matching))
+        return SearchTicketsResponse(items=page, total_elements=len(matching))
 
     @staticmethod
     def _matches(ticket: Ticket, request: SearchTicketsRequest, today: date) -> bool:
