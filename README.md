@@ -133,7 +133,7 @@ npm ci
 npm run dev
 ```
 
-The app is at `http://localhost:5173`.
+The app is at `http://localhost:5173`. The profile selector in the header (Developer, Team lead, Security) sets the identity headers of every request; switching profile clears the cached data and reloads it with the new identity.
 
 ### Connection to the backend
 
