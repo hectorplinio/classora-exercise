@@ -5,6 +5,8 @@ requests that never reach a controller the same Problem Details format.
 """
 
 import logging
+import re
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -30,23 +32,41 @@ def register_exception_handlers(app: FastAPI) -> None:
 async def _validation_error(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)
     invalid_params = [
-        # loc is ("query", "limit"), ("path", "id"), ("body", "dueDate"), or ("body",) if empty.
-        InvalidParam(
-            name=".".join(str(part) for part in error["loc"][1:]) or str(error["loc"][0]),
-            reason=error["msg"],
-        )
-        for error in exc.errors()
+        InvalidParam(name=_param_name(error), reason=error["msg"]) for error in exc.errors()
     ]
     return problem_response(422, "The request has invalid parameters.", invalid_params)
+
+
+def _param_name(error: Any) -> str:
+    # loc is ("query", "limit"), ("path", "id"), ("body", "dueDate"), or ("body",) if empty.
+    # Invalid JSON gives ("body", <character position>): the whole body is the culprit.
+    location, *path = error["loc"]
+    if error["type"] == "json_invalid" or not path:
+        return str(location)
+    return ".".join(str(part) for part in path)
 
 
 async def _application_error(_: Request, exc: Exception) -> JSONResponse:
     return handle_controller_error(exc, logger)
 
 
-async def _http_error(_: Request, exc: Exception) -> JSONResponse:
+async def _http_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, HTTPException)
-    return problem_response(exc.status_code, str(exc.detail))
+    if exc.status_code == 400:
+        # FastAPI raises 400 when the body cannot even be decoded. The contract treats every
+        # malformed body as 422, so it is reported like any other invalid body.
+        body = InvalidParam(name="body", reason=str(exc.detail))
+        return problem_response(422, "The request has invalid parameters.", [body])
+    if exc.status_code == 405:
+        return problem_response(405, str(exc.detail), headers={"Allow": _allowed_methods(request)})
+    return problem_response(exc.status_code, str(exc.detail), headers=exc.headers)
+
+
+def _allowed_methods(request: Request) -> str:
+    """Every method of the path (RFC 9110). Starlette only lists the first matching route's, but
+    GET and PATCH /tickets/{id} are two routes. The table is built by `create_rest_app`."""
+    allowed: list[tuple[re.Pattern[str], str]] = request.app.state.allowed_methods
+    return next((methods for path, methods in allowed if path.fullmatch(request.url.path)), "")
 
 
 async def _unexpected_error(_: Request, exc: Exception) -> JSONResponse:
