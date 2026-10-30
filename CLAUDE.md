@@ -31,6 +31,7 @@ README.md
 
 - `main` is protected. **Never commit to `main` directly.** Every change goes through a branch and a PR.
 - Work on **one PR at a time**, following `statements/PLAN.md` (gitignored) in order. Stop when a PR is ready and wait for the candidate to review and merge it before starting the next one.
+- **Never commit before the candidate has reviewed the changes.** Leave the work uncommitted, list the changed files with a short summary of each, and wait for explicit approval. Push and open PRs only when asked.
 - Branch names: `feat/...`, `fix/...`, `test/...`, `chore/...`, `docs/...`.
 - Commits: Conventional Commits, small and meaningful (e.g. `feat(backend): add set due date use case`). The commit history is evaluated: never squash everything into one commit.
 - Merge method: rebase and merge (keeps every commit, linear history).
