@@ -57,3 +57,13 @@ test('selecting an unknown profile keeps the current one', () => {
 
   expect(result.current.profile.id).toBe('developer');
 });
+
+test('re-selecting the current profile keeps its data', async () => {
+  const { queryClient } = renderWithProviders(<App />, { route: '/nope' });
+  await screen.findByRole('group', { name: 'Usuario actual' });
+
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Perfil' }), 'developer');
+
+  expect(screen.getByRole('group', { name: 'Usuario actual' })).toHaveTextContent('Payments');
+  expect(queryClient.getQueryCache().getAll()).toHaveLength(1);
+});

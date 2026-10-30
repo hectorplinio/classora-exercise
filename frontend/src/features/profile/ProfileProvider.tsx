@@ -31,14 +31,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const selectProfile = useCallback(
     (id: string) => {
       const next = findProfile(id);
-      if (!next) return;
+      // Re-selecting the current profile must not clear the cache: nothing would re-render, and
+      // the queries in flight would be left without a cache entry.
+      if (!next || next.id === profile.id) return;
       // Query keys already include the profile; clearing also drops the previous profile's data
       // from memory, so nothing it could see survives the switch.
       queryClient.clear();
       storeProfile(next.id);
       setProfile(next);
     },
-    [queryClient],
+    [profile.id, queryClient],
   );
 
   const value = useMemo(() => ({ profile, selectProfile }), [profile, selectProfile]);
