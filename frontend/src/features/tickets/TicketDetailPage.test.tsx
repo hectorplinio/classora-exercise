@@ -155,7 +155,7 @@ test('from the list to the detail and back, keeping the filters', async () => {
   renderWithProviders(<App />, { route: '/tickets?q=sec&sort=KEY' });
 
   await userEvent.click(await screen.findByRole('link', { name: 'SEC-1' }));
-  await userEvent.click(await screen.findByRole('link', { name: '← Volver al listado' }));
+  await userEvent.click(await screen.findByRole('link', { name: 'Volver al listado' }));
 
   expect(await screen.findByRole('searchbox', { name: 'Buscar' })).toHaveValue('sec');
 });

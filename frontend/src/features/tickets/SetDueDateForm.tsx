@@ -39,7 +39,7 @@ export function SetDueDateForm({ ticket }: { ticket: Ticket }) {
     <form
       aria-labelledby="due-date-title"
       noValidate
-      className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
+      className="card flex flex-col gap-4 p-5"
       onSubmit={(event) => {
         void handleSubmit(({ dueDate }) => {
           mutation.mutate(dueDate, {
@@ -50,17 +50,23 @@ export function SetDueDateForm({ ticket }: { ticket: Ticket }) {
         })(event);
       }}
     >
-      <h3 id="due-date-title" className="font-semibold">
-        Fijar fecha compromiso
-      </h3>
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        Fecha compromiso
+      <div>
+        <h3 id="due-date-title" className="font-semibold tracking-tight">
+          Fijar fecha compromiso
+        </h3>
+        <p className="mt-1 text-sm text-zinc-500">
+          Fecha en la que el equipo se compromete a resolverlo. Un ticket reportado pasa a estar en
+          curso.
+        </p>
+      </div>
+      <label className="flex flex-col gap-1.5">
+        <span className="label">Fecha compromiso</span>
         <input
           type="date"
           min={minDate}
           aria-invalid={errors.dueDate ? true : undefined}
           aria-describedby={errors.dueDate ? 'due-date-error' : undefined}
-          className="w-48 rounded-md border border-slate-300 px-3 py-1.5"
+          className="field aria-invalid:border-red-500"
           {...register('dueDate', {
             required: 'Indica una fecha.',
             // YYYY-MM-DD strings compare like dates.
@@ -69,16 +75,12 @@ export function SetDueDateForm({ ticket }: { ticket: Ticket }) {
         />
       </label>
       {errors.dueDate && (
-        <p id="due-date-error" className="text-sm text-red-700">
+        <p id="due-date-error" className="-mt-2 text-sm text-red-700">
           {errors.dueDate.message}
         </p>
       )}
       <div>
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="rounded-md bg-blue-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
-        >
+        <button type="submit" disabled={mutation.isPending} className="btn-primary w-full">
           {mutation.isPending ? 'Guardando…' : 'Guardar'}
         </button>
       </div>
@@ -86,7 +88,10 @@ export function SetDueDateForm({ ticket }: { ticket: Ticket }) {
         <ErrorMessage error={mutation.error} />
       )}
       {mutation.isSuccess && (
-        <p role="status" className="text-sm text-emerald-700">
+        <p
+          role="status"
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800"
+        >
           Fecha compromiso guardada.
         </p>
       )}

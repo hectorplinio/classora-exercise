@@ -27,29 +27,53 @@ function TicketDetail({ id }: { id: string }) {
   if (error instanceof ApiError && error.status === 404) return <NotFoundPage />;
 
   return (
-    <section aria-labelledby="ticket-title" className="flex flex-col gap-4">
+    <section aria-labelledby="ticket-title" className="flex flex-col gap-6">
       <BackToList />
       {error ? (
         <ErrorMessage error={error} />
       ) : isPending ? (
-        <p className="text-slate-500">Cargando…</p>
+        <DetailSkeleton />
       ) : (
         <>
-          <h2 id="ticket-title" className="text-xl font-semibold">
-            <span className="font-mono">{ticket.key}</span> · {ticket.title}
-          </h2>
-          <TicketFields ticket={ticket} />
-          {canUpdate &&
-            (ticket.state === 'DONE' ? (
-              <p className="text-sm text-slate-600">
-                El ticket está cerrado: ya no se puede fijar la fecha compromiso.
-              </p>
-            ) : (
-              <SetDueDateForm ticket={ticket} />
-            ))}
+          <header className="flex flex-col gap-3">
+            <h2 id="ticket-title" className="text-2xl font-semibold tracking-tight text-balance">
+              <span className="font-mono text-zinc-400">{ticket.key}</span> · {ticket.title}
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <StateBadge state={ticket.state} />
+              <SeverityBadge severity={ticket.severity} />
+              {ticket.expired && <ExpiredBadge />}
+            </div>
+          </header>
+          <div className="grid items-start gap-6 lg:grid-cols-3">
+            <TicketFields ticket={ticket} />
+            <aside className="flex flex-col gap-4">
+              {!canUpdate ? (
+                <Note>Necesitas el permiso tickets.update para fijar la fecha compromiso.</Note>
+              ) : ticket.state === 'DONE' ? (
+                <Note>El ticket está cerrado: ya no se puede fijar la fecha compromiso.</Note>
+              ) : (
+                <SetDueDateForm ticket={ticket} />
+              )}
+            </aside>
+          </div>
         </>
       )}
     </section>
+  );
+}
+
+function Note({ children }: { children: ReactNode }) {
+  return <p className="card p-5 text-sm text-zinc-600">{children}</p>;
+}
+
+function DetailSkeleton() {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-6">
+      <p className="sr-only">Cargando…</p>
+      <div className="h-8 w-2/3 animate-pulse rounded bg-zinc-100" />
+      <div className="card h-72 animate-pulse lg:w-2/3" />
+    </div>
   );
 }
 
@@ -63,15 +87,18 @@ function BackToList() {
       : '';
 
   return (
-    <Link to={`/tickets${from}`} className="text-sm text-blue-700 underline">
-      ← Volver al listado
+    <Link
+      to={`/tickets${from}`}
+      className="inline-flex w-fit items-center gap-1.5 rounded text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+    >
+      <span aria-hidden="true">←</span> Volver al listado
     </Link>
   );
 }
 
 function TicketFields({ ticket }: { ticket: Ticket }) {
   const fields: [string, ReactNode][] = [
-    ['Activo', <span className="font-mono">{ticket.asset}</span>],
+    ['Activo', <span className="font-mono text-[13px]">{ticket.asset}</span>],
     ['Equipo creador', ticket.creatorTeam],
     ['Equipo asignado', ticket.assignedTeam],
     ['Responsable', ticket.assignee],
@@ -80,9 +107,9 @@ function TicketFields({ ticket }: { ticket: Ticket }) {
     ['Restringido', ticket.restricted ? 'Sí' : 'No'],
     [
       'Fecha límite',
-      <>
+      <span className="flex items-center gap-2 tabular-nums">
         {formatDate(ticket.targetDate)} {ticket.expired && <ExpiredBadge />}
-      </>,
+      </span>,
     ],
     ['Fecha compromiso', ticket.dueDate ? formatDate(ticket.dueDate) : '—'],
     ['Creado', formatDateTime(ticket.createdAt)],
@@ -90,11 +117,11 @@ function TicketFields({ ticket }: { ticket: Ticket }) {
   ];
 
   return (
-    <dl className="grid gap-x-6 gap-y-3 rounded-lg border border-slate-200 bg-white p-4 text-sm sm:grid-cols-[max-content_1fr]">
+    <dl className="card grid gap-x-8 gap-y-5 p-5 text-sm sm:grid-cols-2 lg:col-span-2">
       {fields.map(([label, value]) => (
-        <div key={label} className="contents">
-          <dt className="font-medium text-slate-600">{label}</dt>
-          <dd>{value}</dd>
+        <div key={label} className="flex flex-col gap-1">
+          <dt className="label">{label}</dt>
+          <dd className="text-zinc-900">{value}</dd>
         </div>
       ))}
     </dl>

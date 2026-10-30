@@ -40,7 +40,7 @@ test('a profile with tickets.update sets the due date and the ticket moves to "E
   await expect(field(page, 'Fecha compromiso')).toHaveText('15/01/2099');
 
   // The list shows the new state too.
-  await page.getByRole('link', { name: '← Volver al listado' }).click();
+  await page.getByRole('link', { name: 'Volver al listado' }).click();
   await page.getByRole('searchbox', { name: 'Buscar' }).fill(SEC_1024.key);
   const row = page.getByRole('row', { name: new RegExp(SEC_1024.key) });
   await expect(row).toContainText('En curso');
