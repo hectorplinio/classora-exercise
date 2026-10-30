@@ -42,18 +42,30 @@ README.md
 
 - Tooling: `uv`, `ruff` (lint + format), `mypy --strict`, `pytest`.
 - **Hexagonal architecture (mandatory):**
-  - `domain/`: entities, value objects, business rules (visibility, expiry, due date transition) and domain errors. **No imports from FastAPI, Pydantic or persistence.**
-  - `application/ports/`: outbound interfaces (`TicketRepository`, `Clock`), defined in the core.
-  - `application/use_cases/`: one use case per operation (`SearchTickets`, `GetTicket`, `SetTicketDueDate`) orchestrating the domain through ports.
-  - `infrastructure/input/fastapi/`: input adapter, the only module that imports FastAPI. App factory exposed as an `AsgiApp` protocol, router, own DTOs (camelCase via Pydantic aliases), header-based user, domain error → HTTP translation.
-  - `infrastructure/output/persistence/`: output adapter. In-memory repository and seed.
+  - `domain/`: entities, value objects and business rules (visibility, expiry, due date transition). One folder per entity (`ticket/`, `user/`) with a `model.py`. **No imports from FastAPI, Pydantic or persistence.** Entities are frozen dataclasses.
+  - `application/<entity>/`: `repository_port.py` (outbound port, `ABC`) and `usecases/`, with one pair of files per operation: `<action>_port.py` (use case interface, `ABC`, plus its request/response dataclasses) and `<action>_usecase.py` (implementation, method `execute`). Cross-cutting ports in `application/shared/` (e.g. `clock_port.py`).
+  - `infrastructure/input/fastapi/`: input adapter, the only module that imports FastAPI. `app.py` (app factory exposed as an `AsgiApp` protocol), `<entity>/router.py` plus one `<action>_controller.py` per endpoint with its own Pydantic DTOs (camelCase aliases), `shared/handle_controller_error.py` with `HTTP_STATUS_CODE_BY_ERROR` (error class → status, Problem Details body), header-based user.
+  - `infrastructure/output/<entity>/<technology>/repository.py` (e.g. `ticket/in_memory/repository.py`) and other driven adapters such as `output/clock/system_clock.py`.
   - `main.py`: the **single composition root**. Wires adapters to use cases; never imports FastAPI.
+  - `shared/errors.py`: every application error (see "Error handling" below). Lowest layer: importable from everywhere, imports nothing.
 - Never call `date.today()` or `datetime.now()` outside the `Clock` adapter. All dates in UTC.
 - Errors use **Problem Details (RFC 9457)** with `application/problem+json`, including FastAPI's validation errors (replace the default 422 format).
 - Tests:
+  - `tests/` mirrors `src/tickets/` (`tests/domain/...`, `tests/application/...`, `tests/infrastructure/...`); helpers (builders, test doubles) in `tests/utils/`.
   - Domain and use case unit tests **without FastAPI**, using test doubles (`FakeTicketRepository`, `FixedClock`).
   - API tests for every rule in the statement.
   - Write tests first (TDD) for domain and use cases.
+
+## Error handling
+
+- All errors live in `backend/src/tickets/shared/errors.py`. Do not create error modules per entity or per layer: reuse a class or add a new one there.
+- The class says what kind of failure happened, the message says what exactly. Every class extends `MiniTicketsError`:
+  - `DomainError` (business rule) → `EntityNotFoundError` (404), `EntityConflictError` (409), `UnprocessableEntityError(message, details)` (422, `details` maps domain field → reason).
+  - `AuthorizationError` (403).
+  - Add `AuthenticationError` (401) or `ApplicationError` only when something raises them.
+- Raise them from any layer. Wrap low-level exceptions with `raise ... from e`; never leak them.
+- The HTTP mapping (error class → status, Problem Details body) lives only in the FastAPI input adapter. Any other exception → 500 without internal details.
+- Invalid parameters or body are 422, never 400 (statement).
 
 ## Frontend rules
 
