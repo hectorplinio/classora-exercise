@@ -218,3 +218,25 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** Two complementary checks in the test suite. (1) A structural comparison of the generated spec and the contract per operation, after normalizing OpenAPI 3.1 vs 3.0 differences; it ignores documentation-only keys and limits FastAPI cannot express (e.g. `maxLength` implied by `format: uuid`). It was validated with nine deliberate contradictions. (2) Schemathesis, which fuzzes the running app from the contract. Excluded on purpose: the two bearer-enforcement checks (the bearer scheme is declared but identity is simulated with headers) and, only for the PATCH, "schema-valid input is accepted" (its 409/422 business rules cannot be expressed in a schema).
 
 **Consequences.** Building the comparison surfaced three contradictions, fixed in the adapter: error responses documented as `application/json`, `Problem.type` not required and `detail`/`instance` nullable, and missing defaults for `state`/`severity`. Schemathesis found three bugs: a 405 without `Allow`, an `Allow` listing only one of the methods of `/tickets/{id}`, and an undecodable body answered with an undocumented 400 (now 422, like any malformed body).
+
+## 31. API client generated from the contract with Hey API
+
+**Context.** The statement requires the frontend types and API client to be derived from the contract, and responses to be validated at the boundary.
+
+**Decision.** `@hey-api/openapi-ts` generates, from `contract/openapi-rest.yml`, the TypeScript types, the Zod schemas and a typed fetch SDK (`npm run generate:api` → `frontend/src/api/generated`). The SDK is configured to parse every response with its Zod schema, so data that breaks the contract never reaches the app. The generated code is committed (it is part of the reviewed code) and CI regenerates it and fails on any diff. Alternatives: `openapi-typescript` only generates types (Zod schemas would be hand-written or need a second tool); Orval is similar but heavier and centred on generating React Query hooks, which we prefer to write ourselves.
+
+**Consequences.** A contract change that is not regenerated breaks CI; a backend response that does not match the contract is a validation error, not a silent bug. `exactOptionalPropertyTypes` is off because the generated client does not compile with it; the rest of `strict`, plus `noUncheckedIndexedAccess`, is on. A transitive `js-yaml` used only by the generator is pinned to a patched version with an npm override.
+
+## 32. Frontend reaches the backend through the Vite proxy
+
+**Decision.** In development the browser only talks to Vite, which forwards `/api` to the backend (`MINI_TICKETS_BACKEND_URL`, default `http://localhost:8000`). The generated client has no base URL, so every request is same-origin.
+
+**Consequences.** No CORS configuration in the backend, no preflight requests for the custom `X-User-*` headers, and the same relative URLs work behind any reverse proxy in production.
+
+## 33. Frontend structure: by feature, not hexagonal
+
+**Context.** The statement requires a hexagonal backend; it says nothing about the frontend's structure.
+
+**Decision.** The frontend is organised by feature (`api/`, `features/<feature>/`, `shared/`), keeping the useful part of hexagonal, the direction of dependencies: components never call `fetch`; they use hooks (TanStack Query), which use `api/`. Pure logic (labels, permissions, URL parameter normalization) lives in plain TypeScript functions. In tests MSW replaces the network, as test doubles replace the ports in the backend.
+
+**Consequences.** Layers of ports and adapters on top of a generated client and TanStack Query would add indirection without testability or flexibility gains for an app of this size.

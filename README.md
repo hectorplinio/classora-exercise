@@ -119,7 +119,40 @@ The served documentation is the contract itself: `/openapi.json` and `/docs` ret
 
 ## Frontend
 
-_Completed in the frontend PRs._
+### Requirements
+
+- Node.js 22.18+ (CI uses 24)
+
+### Run
+
+Start the backend first (see above), then:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+The app is at `http://localhost:5173`.
+
+### Connection to the backend
+
+In development the browser only talks to Vite, which proxies `/api` to the backend (`http://localhost:8000`, or `MINI_TICKETS_BACKEND_URL`). Requests are same-origin, so the backend needs no CORS configuration and the custom identity headers do not trigger preflight requests.
+
+### API client from the contract
+
+`npm run generate:api` generates the types, Zod schemas and a typed fetch client from `contract/openapi-rest.yml` into `src/api/generated` (never edited by hand). Every response is parsed with its Zod schema before reaching the app. CI regenerates the client and fails if it differs from the committed one, so the frontend cannot drift from the contract.
+
+### Checks and tests
+
+From `frontend/`:
+
+| Command | What it checks |
+| --- | --- |
+| `npm test` | Unit and component tests (Vitest, Testing Library, MSW) |
+| `npm run typecheck` | TypeScript (`strict`) |
+| `npm run lint` | ESLint (`typescript-eslint` strict, type-checked) |
+| `npm run generate:api` | Regenerates the API client from the contract |
 
 ## End-to-end tests
 
