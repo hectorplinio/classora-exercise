@@ -239,6 +239,7 @@ The code, the documentation and the API are in English. The user interface is in
 
 - **Optimistic concurrency control.** Two users changing the same ticket at once: today the last write wins. `ETag` / `If-Match` on the PATCH (412 on a stale version) would make the conflict visible.
 - **Real authentication.** The contract already declares a bearer scheme; validating a JWT (and deriving team and permissions from its claims) would replace the simulated headers without touching the use cases.
+- **Filtering, sorting and pagination in the database.** The use cases apply visibility, filters and sorting in memory over `list_all()`: simple and identical for both storages, fine for a few thousand tickets. With large volumes the repository port would take a query (filters, sort, page) and the SQLite adapter would translate it to SQL with indexes, keeping visibility as a domain rule expressed in the query.
 - **Migrations** (Alembic) if the SQLite schema starts to change, and a server database if several instances had to share data.
 - **The due date action in each row** of the list, as the React statement suggests: the optimistic hook already updates every cached list.
 - **Automated accessibility checks** (axe) in the end-to-end tests, and more browsers than Chromium.

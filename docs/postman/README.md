@@ -11,7 +11,7 @@
 | Security | Security Champions | `tickets.read,tickets.update,tickets.read.all` |
 | Anonymous | — | — (every request → 401) |
 
-The collection pre-request script sends both headers and computes `{{today}}`, `{{tomorrow}}` and `{{yesterday}}` (UTC). Tickets come from the deterministic seed, so the ids in the requests are stable; changes are lost when the backend restarts.
+The collection pre-request script sends both headers and computes `{{today}}`, `{{tomorrow}}` and `{{yesterday}}` (UTC). Tickets come from the deterministic seed, so the ids in the requests are stable; with the default in-memory storage, changes are lost when the backend restarts (with SQLite or Docker they persist; see the main README).
 
 Expected status codes per profile:
 
