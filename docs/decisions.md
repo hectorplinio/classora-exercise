@@ -240,3 +240,17 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** The frontend is organised by feature (`api/`, `features/<feature>/`, `shared/`), keeping the useful part of hexagonal, the direction of dependencies: components never call `fetch`; they use hooks (TanStack Query), which use `api/`. Pure logic (labels, permissions, URL parameter normalization) lives in plain TypeScript functions. In tests MSW replaces the network, as test doubles replace the ports in the backend.
 
 **Consequences.** Layers of ports and adapters on top of a generated client and TanStack Query would add indirection without testability or flexibility gains for an app of this size.
+
+## 34. Profile switching: identity per request, profile in every query key
+
+**Context.** Switching profile must reload the data with the new visibility and permissions, without leftovers from the previous one.
+
+**Decision.** The selected profile lives in a React context (persisted in `localStorage` when available). Each query passes the identity headers of the profile it was made with (`identityHeaders(profile)`) instead of a global, mutable client setting, and every query key starts with the profile id. On switch, the TanStack Query cache is cleared. 4xx responses are not retried (they are answers, not transient failures).
+
+**Consequences.** A request can never carry one profile's headers while its result is cached under another's, and no data of the previous profile is shown or kept in memory after a switch: the UI shows a loading state and fetches again.
+
+## 35. Backend errors: `ApiError` plus one message per status
+
+**Decision.** `unwrap()` turns a failed SDK call into an `ApiError` with the HTTP status and the Problem Details body, validated with the contract's Zod schema (or `null` if the body does not follow it; status `0` if the server could not be reached). `errorMessage()` maps the status to a Spanish UI message, distinguishing 403, 404, 409 and 422 (plus 401 and network errors). Screens that need more context (e.g. the due date form in a later PR) can read `problem.invalidParams`.
+
+**Consequences.** Components never parse HTTP errors themselves; the mapping is a pure function with its own tests.
