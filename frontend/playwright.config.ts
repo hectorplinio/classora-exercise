@@ -5,6 +5,9 @@ import { defineConfig, devices } from '@playwright/test';
 // in-memory seed, which makes the tests deterministic.
 const BACKEND_PORT = 8100;
 const FRONTEND_PORT = 5180;
+// uvicorn listens on 127.0.0.1 by default: use it explicitly instead of depending on how
+// `localhost` resolves.
+const BACKEND_URL = `http://127.0.0.1:${String(BACKEND_PORT)}`;
 
 export default defineConfig({
   testDir: './e2e',
@@ -22,14 +25,14 @@ export default defineConfig({
     {
       command: `uv run uvicorn tickets.main:create_app --factory --port ${String(BACKEND_PORT)}`,
       cwd: '../backend',
-      url: `http://localhost:${String(BACKEND_PORT)}/openapi.json`,
+      url: `${BACKEND_URL}/openapi.json`,
       reuseExistingServer: false,
     },
     // The production build, served by `vite preview` (same `/api` proxy as the dev server).
     {
       command: `npx vite build && npx vite preview --port ${String(FRONTEND_PORT)} --strictPort`,
       url: `http://localhost:${String(FRONTEND_PORT)}`,
-      env: { MINI_TICKETS_BACKEND_URL: `http://localhost:${String(BACKEND_PORT)}` },
+      env: { MINI_TICKETS_BACKEND_URL: BACKEND_URL },
       reuseExistingServer: false,
     },
   ],
