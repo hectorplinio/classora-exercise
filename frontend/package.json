@@ -14,12 +14,14 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate:api": "openapi-ts"
+    "generate:api": "openapi-ts",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@tanstack/react-query": "5.105.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
+    "react-hook-form": "7.91.0",
     "react-router": "7.18.5",
     "zod": "4.6.7"
   },
@@ -34,6 +36,7 @@
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
     "@vitejs/plugin-react": "6.1.2",
+    "@vitest/coverage-v8": "5.0.5",
     "eslint": "10.14.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.7",
