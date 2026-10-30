@@ -3,7 +3,7 @@
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from typing import Any
-from uuid import UUID
+from uuid import uuid4
 
 from tickets.domain.ticket.model import Severity, Ticket, TicketState
 from tickets.domain.user.model import Permission, User
@@ -12,7 +12,7 @@ TODAY = date(2026, 10, 30)
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 
 _DEFAULT_TICKET = Ticket(
-    id=UUID("b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11"),
+    id=uuid4(),
     key="SEC-1024",
     title="Log4j vulnerable version in payments-api",
     asset="payments-api",
@@ -30,7 +30,8 @@ _DEFAULT_TICKET = Ticket(
 
 
 def a_ticket(**overrides: Any) -> Ticket:
-    return replace(_DEFAULT_TICKET, **overrides)
+    """A valid ticket with a fresh id; override only what the test cares about."""
+    return replace(_DEFAULT_TICKET, **{"id": uuid4(), **overrides})
 
 
 def a_user(team: str = "Payments", *permissions: Permission) -> User:
