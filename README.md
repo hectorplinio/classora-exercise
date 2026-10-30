@@ -177,6 +177,10 @@ The tests (`frontend/e2e/tickets.spec.ts`) cover the integration scenarios of th
 
 They run in CI in the `e2e` job; on failure the Playwright report (with traces) is uploaded as an artifact.
 
+## React senior test
+
+The answers to the React statement (code review of question 1, contract and type sync of question 2A, the `useTicketListParams` hook of question 2B) are in [`react-senior/README.md`](react-senior/README.md). The rewritten component and the hook are the application's own code, compiled and tested in CI.
+
 ## Technical decisions
 
 Every relevant decision, with its context and consequences, is in [`docs/decisions.md`](docs/decisions.md).
