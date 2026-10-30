@@ -1,0 +1,35 @@
+# Original statements and private planning notes (not part of the deliverable)
+statements/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# Env
+.env
+.env.*
+!.env.example
