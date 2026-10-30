@@ -1,7 +1,10 @@
 """Composition root: the only place where adapters are wired to use cases.
 
 Run with: uv run uvicorn tickets.main:create_app --factory --reload
-The repository lives in memory: run a single worker (each process would have its own copy).
+
+Tickets live in memory by default (fresh seed on every start; run a single worker, each process
+would have its own copy). Set MINI_TICKETS_DATABASE to a SQLite file to keep changes across
+restarts: it is seeded on the first start, when it has no tickets.
 """
 
 import os
@@ -10,6 +13,8 @@ from typing import Any
 
 import yaml
 
+from tickets.application.shared.clock_port import ClockInterface
+from tickets.application.ticket.repository_port import TicketRepositoryInterface
 from tickets.application.ticket.usecases.get_ticket_usecase import GetTicketUseCase
 from tickets.application.ticket.usecases.search_tickets_usecase import SearchTicketsUseCase
 from tickets.application.ticket.usecases.set_ticket_due_date_usecase import (
@@ -20,6 +25,7 @@ from tickets.infrastructure.input.fastapi.shared.dependencies import Dependencie
 from tickets.infrastructure.output.clock.system_clock import SystemClock
 from tickets.infrastructure.output.ticket.in_memory.repository import InMemoryTicketRepository
 from tickets.infrastructure.output.ticket.seed import build_seed_tickets
+from tickets.infrastructure.output.ticket.sqlite.repository import SqliteTicketRepository
 
 # backend/src/tickets/main.py → repository root. Override with MINI_TICKETS_CONTRACT (e.g. Docker).
 _DEFAULT_CONTRACT = Path(__file__).resolve().parents[3] / "contract" / "openapi-rest.yml"
@@ -32,9 +38,18 @@ def load_contract() -> dict[str, Any]:
     return document
 
 
+def create_ticket_repository(clock: ClockInterface) -> TicketRepositoryInterface:
+    database = os.environ.get("MINI_TICKETS_DATABASE")
+    if not database:
+        return InMemoryTicketRepository(build_seed_tickets(clock.now()))
+    repository = SqliteTicketRepository(database)
+    repository.seed_if_empty(build_seed_tickets(clock.now()))
+    return repository
+
+
 def create_app() -> AsgiApp:
     clock = SystemClock()
-    repository = InMemoryTicketRepository(build_seed_tickets(clock.now()))
+    repository = create_ticket_repository(clock)
     return create_rest_app(
         Dependencies(
             clock=clock,
