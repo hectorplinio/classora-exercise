@@ -135,6 +135,8 @@ npm run dev
 
 The app is at `http://localhost:5173`. The profile selector in the header (Developer, Team lead, Security) sets the identity headers of every request; switching profile clears the cached data and reloads it with the new identity.
 
+The ticket detail (`/tickets/{id}`) shows "No encontrado" when the ticket does not exist or is not visible, and the "Fijar fecha compromiso" form only for profiles with `tickets.update`.
+
 The ticket list (`/tickets`) keeps its filters, search, order and page in the URL, so a list can be shared as a link and the browser back/forward buttons work. Styling uses Tailwind CSS (a build-time tool, not a component library): tables, forms and controls are plain semantic HTML.
 
 ### Connection to the backend
@@ -152,6 +154,7 @@ From `frontend/`:
 | Command | What it checks |
 | --- | --- |
 | `npm test` | Unit and component tests (Vitest, Testing Library, MSW) |
+| `npm run test:coverage` | Same, with coverage; fails below 100% (generated client and bootstrap excluded) |
 | `npm run typecheck` | TypeScript (`strict`) |
 | `npm run lint` | ESLint (`typescript-eslint` strict, type-checked) |
 | `npm run generate:api` | Regenerates the API client from the contract |

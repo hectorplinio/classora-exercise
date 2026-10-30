@@ -280,3 +280,18 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** `DebouncedInput` keeps the typed text locally and commits it after 300 ms without typing. The hook only maps the URL: putting the debounce there would make the URL (and the back button) lag behind or duplicate state. While a new page or filter loads, the table keeps the previous rows dimmed (`placeholderData`), but only if they belong to the same profile, so a profile switch never shows the previous profile's tickets.
 
 **Consequences.** One request per pause in typing, not per keystroke; pagination does not flash an empty table.
+
+## 40. Ticket detail and "Fijar fecha compromiso"
+
+**Decision.**
+- A 404 on the detail (the ticket does not exist or is not visible) renders the "not found" page, as the statement asks. A malformed id renders it too, without calling the backend.
+- The action is shown only when `GET /me` includes `tickets.update`, and not for a `DONE` ticket (a note explains why). Hiding it is UX only: the backend still answers 403 and 409, and both are shown below the form, like a 422.
+- The form (React Hook Form) checks that the date is not before today in the user's calendar, for quick feedback; the server, which uses its own clock, has the last word.
+- After saving, the ticket the server returns replaces the cached detail (so it shows "En curso" at once), and every cached list of the profile is invalidated, because the new state or date can change which tickets match a filter and in which order. The update is not optimistic: that is the optional question 3 of the React statement.
+- The link from the list to the detail carries the list's query string in the navigation state, so "Volver al listado" keeps the filters.
+
+## 41. 100% test coverage on both sides
+
+**Decision.** As in the backend (`pytest --cov`), the frontend requires 100% line, branch and function coverage in CI (`npm run test:coverage`, Vitest with V8). Not measured: the generated API client (it comes from the contract and is checked by regeneration), test helpers, and `main.tsx` (the bootstrap, exercised by the end-to-end tests).
+
+**Consequences.** Coverage is a floor, not the goal: measuring it found real gaps (the filters form wired to the URL, previous/first page, unavailable storage), now tested. A new branch without a test fails the build.
