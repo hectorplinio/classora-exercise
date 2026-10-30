@@ -1,0 +1,130 @@
+# Lint rules for the contract. `recommended` plus checks for the statement's requirements
+# that can be verified mechanically (numbers refer to the contract requirements list).
+extends:
+  - recommended
+
+rules:
+  # Examples must validate against their schema (req. 2).
+  no-invalid-schema-examples: error
+  no-invalid-parameter-examples: error
+  # Error responses use Problem Details (req. 8).
+  operation-4xx-problem-details-rfc7807: error
+  # Kebab-case paths (req. 5).
+  paths-kebab-case: error
+  # Exercise repository, no license to declare.
+  info-license: off
+
+  # Req. 1: operation metadata.
+  rule/operation-metadata:
+    subject:
+      type: Operation
+    assertions:
+      required: [operationId, tags, summary, description]
+    message: Every operation needs operationId, tags, summary and description.
+
+  # Req. 2: parameters are documented with an example.
+  rule/parameter-documented:
+    subject:
+      type: Parameter
+    assertions:
+      required: [description, example]
+    message: Every parameter needs a description and an example.
+
+  # Req. 5: PascalCase schema names.
+  rule/schema-name-pascal-case:
+    subject:
+      type: NamedSchemas
+    assertions:
+      casing: PascalCase
+    message: Schema names must be PascalCase (req. 5).
+  rule/property-documented:
+    subject:
+      type: Schema
+    where:
+      - subject:
+          type: SchemaProperties
+        assertions:
+          defined: true
+    assertions:
+      required: [description, example]
+    message: Every schema property needs a description and an example.
+
+  # Req. 3: bounded validation.
+  rule/string-bounded:
+    subject:
+      type: Schema
+    where:
+      - subject:
+          type: Schema
+          property: type
+        assertions:
+          const: string
+          defined: true
+    assertions:
+      requireAny: [maxLength, pattern, enum]
+    message: Strings need maxLength, pattern or enum.
+  rule/array-bounded:
+    subject:
+      type: Schema
+    where:
+      - subject:
+          type: Schema
+          property: type
+        assertions:
+          const: array
+          defined: true
+    assertions:
+      required: [maxItems]
+    message: Arrays need maxItems.
+  rule/integer-bounded:
+    subject:
+      type: Schema
+    where:
+      - subject:
+          type: Schema
+          property: type
+        assertions:
+          const: integer
+          defined: true
+    assertions:
+      required: [minimum, maximum]
+    message: Integers need minimum and maximum.
+
+  # Req. 3: optional parameters have a default.
+  rule/optional-parameter-default:
+    subject:
+      type: Schema
+    where:
+      - subject:
+          type: Parameter
+          property: required
+        assertions:
+          const: false
+          defined: true
+    assertions:
+      required: [default]
+    message: Optional parameters need a default.
+
+  # Req. 4: uppercase enum values.
+  rule/enum-uppercase:
+    subject:
+      type: Schema
+      property: enum
+    assertions:
+      casing: MACRO_CASE
+    message: Enum values must be UPPERCASE.
+
+  # Req. 5: camelCase parameters and properties.
+  rule/parameter-camel-case:
+    subject:
+      type: Parameter
+      property: name
+    assertions:
+      casing: camelCase
+    message: Parameter names must be camelCase.
+  rule/property-camel-case:
+    subject:
+      type: SchemaProperties
+    assertions:
+      casing: camelCase
+    message: Property names must be camelCase.
