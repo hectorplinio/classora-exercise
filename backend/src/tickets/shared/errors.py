@@ -39,3 +39,7 @@ class UnprocessableEntityError(DomainError):
 
 class AuthorizationError(MiniTicketsError):
     """The user lacks the permission the operation requires."""
+
+
+class AuthenticationError(MiniTicketsError):
+    """The caller could not be identified."""
