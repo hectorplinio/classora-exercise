@@ -150,3 +150,19 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** Plain constructor injection: use cases receive their ports in `__init__`, and `main.py` builds the object graph by hand. The statement asks for a single composition point; with three use cases a container would add more code and concepts than it wires, and `Provide[...]` would couple controllers to the container.
 
 **Consequences.** Adding a container later only changes `main.py`.
+
+## 20. Deterministic seed relative to the clock
+
+**Context.** The statement asks for 50+ varied tickets, including expired ones. Hard-coded dates would stop being "expired" or "not expired" as time passes, and random data makes demos and e2e tests unstable.
+
+**Decision.** `build_seed_tickets(now)` generates 60 tickets (the statement's example `SEC-1024` plus 59 derived from their index): every state × severity combination, five assigned teams, tickets created by Security Champions or by the team itself, restricted tickets hidden from other teams, `asset = "None"`. Ids are UUIDv5 of the key. `targetDate` = creation date + an SLA by severity (CRITICAL 7 days, HIGH 30, MEDIUM 60, LOW 90), with creation dates relative to `now`. `REPORTED` tickets never have a due date, since setting one moves them to `IN_PROGRESS`.
+
+**Consequences.** Same data on every start, and always a mix of expired and non-expired tickets. A test checks this for `now`, one year and ten years later.
+
+## 21. In-memory repository guarded by a lock
+
+**Context.** FastAPI runs sync endpoints in a thread pool, so the repository can be used from several threads at once.
+
+**Decision.** `InMemoryTicketRepository` guards its dict with a `threading.Lock`, and `list_all` returns a copy. `SystemClock` is the only code that reads the system time.
+
+**Consequences.** Individual operations are safe. Two concurrent PATCHes on the same ticket are last-write-wins: there is no optimistic locking (a `version` field checked on save). Acceptable for an in-memory exercise; listed under "what I would do with more time".
