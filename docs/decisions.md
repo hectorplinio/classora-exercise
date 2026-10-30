@@ -287,7 +287,7 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 - A 404 on the detail (the ticket does not exist or is not visible) renders the "not found" page, as the statement asks. A malformed id renders it too, without calling the backend.
 - The action is shown only when `GET /me` includes `tickets.update`, and not for a `DONE` ticket (a note explains why). Hiding it is UX only: the backend still answers 403 and 409, and both are shown below the form, like a 422.
 - The form (React Hook Form) checks that the date is not before today in the user's calendar, for quick feedback; the server, which uses its own clock, has the last word.
-- After saving, the ticket the server returns replaces the cached detail (so it shows "En curso" at once), and every cached list of the profile is invalidated, because the new state or date can change which tickets match a filter and in which order. The update is not optimistic: that is the optional question 3 of the React statement.
+- After saving, the ticket the server returns replaces the cached detail (so it shows "En curso" at once), and every cached list of the profile is invalidated, because the new state or date can change which tickets match a filter and in which order. The update was later made optimistic (decision 43).
 - The link from the list to the detail carries the list's query string in the navigation state, so "Volver al listado" keeps the filters.
 
 ## 41. 100% test coverage on both sides
@@ -301,3 +301,9 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** Playwright starts the backend and serves the frontend's production build with `vite preview` (which proxies `/api` like the dev server), on dedicated ports and never reusing a running server. One worker, because the tests share one backend and one of them changes a ticket; each run starts from the deterministic seed, so the tickets used (SEC-1024, SEC-1128) are known. Scenarios check what the user sees (roles and labels), and the restricted-ticket scenario first proves the ticket exists (Security sees it) before asserting Developer does not.
 
 **Consequences.** The tests cover the whole chain (UI, proxy, identity headers, REST adapter, use cases, domain) as delivered. Running them repeatedly found a real race: re-selecting the current profile cleared the cache without re-rendering, leaving the page loading forever; selecting the active profile is now a no-op, with a unit test. One browser (Chromium) is enough: the scenarios test integration, not cross-browser rendering.
+
+## 43. Optimistic due date update (React test, question 3)
+
+**Decision.** `useSetDueDate` applies the change (date, and `REPORTED` → `IN_PROGRESS`) at once to the cached detail and to every cached list of the profile, rolls everything back if the server fails, stores the server's ticket on success and invalidates the lists when it ends. A row that no longer matches its list's filter stays, updated, until the refetch removes it. A 422 that the server explains for `dueDate` (`invalidParams`) is shown on the field.
+
+**Consequences.** The user sees the result immediately and never a state the server rejected. The client does not reimplement the server's filtering, sorting or pagination; the price is that a non-matching row is visible for the duration of one request.

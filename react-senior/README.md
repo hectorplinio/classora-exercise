@@ -7,7 +7,7 @@ The React statement's questions answered against this repository. Its code is no
 | 1. Code review | [below](#question-1--code-review); rewrite in `frontend/src/features/tickets/` |
 | 2A. Contract | [`contract/openapi-rest.yml`](../contract/openapi-rest.yml); [keeping types in sync](#question-2a--keeping-the-typescript-types-and-the-contract-in-sync) |
 | 2B. `useTicketListParams` | [`useTicketListParams.ts`](../frontend/src/features/tickets/useTicketListParams.ts), [notes](#question-2b--useticketlistparams) |
-| 3. Optimistic update (optional) | _In a later PR_ |
+| 3. Optimistic update (optional) | [`useSetDueDate.ts`](../frontend/src/features/tickets/useSetDueDate.ts), [answers](#question-3--optimistic-update-and-permissions) |
 
 Where the React statement and the Full Stack one disagree (dates as `date`, `state`/`severity` as multi-value filters instead of `ALL`, extra ticket fields), the Full Stack one is followed; see the discrepancies in the [main README](../README.md#discrepancies-between-statements).
 
@@ -170,3 +170,39 @@ The contract is linted in CI (Redocly) with the statement's rules (descriptions,
 - `state` and `severity` are lists (every value selected by default) because that is what the contract defines; see decision 38 in [`docs/decisions.md`](../docs/decisions.md).
 
 **Where the debounce goes, and why.** In the input component (`DebouncedInput`), not in the hook. The hook is a plain mapping of the URL: if it debounced, the URL and the back button would lag behind what the user sees, or the hook would need a second copy of the state. The input keeps what is being typed locally and commits to the URL only when the user pauses, so every committed value is a real navigation (shareable, back-button friendly) and one request.
+
+## Question 3 — Optimistic update and permissions
+
+### 1. `useSetDueDate()` with an optimistic update
+
+[`useSetDueDate.ts`](../frontend/src/features/tickets/useSetDueDate.ts), a TanStack Query mutation:
+
+- `onMutate`: cancels the requests in flight for the ticket and the lists (a late response must not overwrite the optimistic data), takes a snapshot, and applies what the server will do (`withDueDate`: the new date, and `IN_PROGRESS` if it was `REPORTED`) to the cached detail and to every cached list.
+- `onError`: puts every snapshot back. The form shows the error (403, 409, or a 422 on the date field).
+- `onSuccess`: stores the ticket the server returned, which is the truth (`lastModified`, any rule the client does not know).
+- `onSettled`: invalidates the lists.
+
+In this application the action lives in the ticket detail rather than in each row (the Full Stack statement only asks for the action, and the detail has room for a labelled form). The hook does not depend on where it is used: because it updates every cached list, the row already shows the new date and state when the user goes back to the list.
+
+### 2. Several cached lists, and a row that no longer matches the filter
+
+Every cached list of the profile (any filters, any page) is updated in place, by prefix of the query key (`setQueriesData`), and all of them are invalidated when the mutation ends, so the server decides the final content of each one.
+
+If the row stops matching the active filter (the filter is `state=REPORTED` and the ticket becomes `IN_PROGRESS`), it **stays visible, updated, until the refetch**, and then disappears. Removing it optimistically would mean reimplementing the server's filtering, sorting and pagination in the client (`expired` depends on the server's date, positions and `totalElements` change, the next page would have to shift a ticket in), and would make the row jump away from under the pointer of the user who just changed it. Keeping it until the server answers is predictable and never shows a wrong page.
+
+### 3. The action only for users with `tickets.update`
+
+[`useHasPermission('tickets.update')`](../frontend/src/features/user/useHasPermission.ts) reads the permissions of `GET /me`, cached per profile; the detail renders the form only when it is true (and not for `DONE` tickets).
+
+**Hiding the button is not enough.** It is UX, not security: anyone can call the API directly, and permissions can change between loading `/me` and clicking. The backend checks the permission on every request and answers 403; the client handles that 403 like any other failure (rollback and a message). In this repository the backend tests assert the 403, and the end-to-end tests check both that the action is hidden and that the restricted ticket is a 404.
+
+### 4. Testing 200, 403 and 409 without a real backend
+
+With **MSW** in Vitest: the handlers answer like the backend (including Problem Details bodies), and the tests drive the real components with Testing Library. In [`TicketDetailPage.test.tsx`](../frontend/src/features/tickets/TicketDetailPage.test.tsx):
+
+- 200: the new date and "En curso" show before the server answers (the handler waits), then the success message.
+- 403, 409, 422: the message is shown, and the ticket and every cached list go back to what they were.
+- 422 on the date: the server's `invalidParams` puts the error on the field.
+- The action is not rendered for a profile without `tickets.update`.
+
+Removing the rollback or the optimistic update of the lists makes these tests fail.
