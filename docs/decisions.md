@@ -202,3 +202,19 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 ## 28. Postman collection checked with Newman
 
 **Decision.** `docs/postman/` has a collection (one request per rule of the statement) and one environment per profile. The collection pre-request script sends the identity headers, so switching profile is switching environment. It was run with Newman against the real server for the four profiles; the expected codes are in `docs/postman/README.md`.
+
+## 29. The served OpenAPI document is the contract
+
+**Context.** FastAPI serves the spec it generates (OpenAPI 3.1), which is close to the contract but not identical (names of DTO schemas, 3.1 idioms, no descriptions or examples).
+
+**Decision.** `main.py` loads `contract/openapi-rest.yml` (path overridable with `MINI_TICKETS_CONTRACT`) and the REST adapter serves it at `/openapi.json` and `/docs`, replacing `servers` with the running instance so "Try it out" works. The generated spec is still available to the tests through `generated_openapi(app)`.
+
+**Consequences.** Clients and documentation always show exactly what was agreed. That the implementation matches it is the job of the conformance tests (decision 30).
+
+## 30. Contract conformance: normalized comparison plus Schemathesis
+
+**Context.** The statement requires that the generated spec does not contradict the contract (paths, parameters, status codes, schemas) and that errors follow the declared format, and asks to explain how this is checked.
+
+**Decision.** Two complementary checks in the test suite. (1) A structural comparison of the generated spec and the contract per operation, after normalizing OpenAPI 3.1 vs 3.0 differences; it ignores documentation-only keys and limits FastAPI cannot express (e.g. `maxLength` implied by `format: uuid`). It was validated with nine deliberate contradictions. (2) Schemathesis, which fuzzes the running app from the contract. Excluded on purpose: the two bearer-enforcement checks (the bearer scheme is declared but identity is simulated with headers) and, only for the PATCH, "schema-valid input is accepted" (its 409/422 business rules cannot be expressed in a schema).
+
+**Consequences.** Building the comparison surfaced three contradictions, fixed in the adapter: error responses documented as `application/json`, `Problem.type` not required and `detail`/`instance` nullable, and missing defaults for `state`/`severity`. Schemathesis found three bugs: a 405 without `Allow`, an `Allow` listing only one of the methods of `/tickets/{id}`, and an undecodable body answered with an undocumented 400 (now 422, like any malformed body).
