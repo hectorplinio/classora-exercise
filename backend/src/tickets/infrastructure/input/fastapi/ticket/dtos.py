@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import Annotated, TypeVar
 from uuid import UUID
 
-from pydantic import AfterValidator, BeforeValidator, ConfigDict, Field
+from pydantic import AfterValidator, BeforeValidator, ConfigDict, EmailStr, Field
 
 from tickets.application.ticket.usecases.search_tickets_port import SortDirection, TicketSortField
 from tickets.domain.ticket.model import Severity, Ticket, TicketState
@@ -22,7 +22,7 @@ class TicketResponse(ApiModel):
     asset: str
     creator_team: str
     assigned_team: str
-    assignee: str
+    assignee: EmailStr
     severity: Severity
     state: TicketState
     restricted: bool
@@ -83,10 +83,10 @@ class SearchTicketsQuery(ApiModel):
     limit: int = Field(default=20, ge=1, le=100)
     q: str = Field(default="", max_length=256)
     state: Annotated[list[TicketState], AfterValidator(_unique)] = Field(
-        default_factory=lambda: list(TicketState), min_length=1, max_length=4
+        default=list(TicketState), min_length=1, max_length=4
     )
     severity: Annotated[list[Severity], AfterValidator(_unique)] = Field(
-        default_factory=lambda: list(Severity), min_length=1, max_length=4
+        default=list(Severity), min_length=1, max_length=4
     )
     assigned_team: str = Field(default="", max_length=100)
     expired_only: bool = False
