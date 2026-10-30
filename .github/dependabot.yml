@@ -1,0 +1,35 @@
+# Weekly dependency updates, one grouped PR per ecosystem. Every update goes through the same CI
+# as any change (contract, backend, frontend, end-to-end and Docker checks).
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      backend:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      frontend:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories: ["/backend", "/frontend"]
+    schedule:
+      interval: weekly
+    groups:
+      docker:
+        patterns: ["*"]
