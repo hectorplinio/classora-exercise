@@ -16,7 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Contract lint added in feat/contract"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Lint contract
+        run: npx -y @redocly/cli@2.72.1 lint contract/openapi-rest.yml --config contract/redocly.yaml
 
   backend:
     runs-on: ubuntu-latest
