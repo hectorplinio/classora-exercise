@@ -14,9 +14,16 @@ export default defineConfig({
       '/api': backendUrl,
     },
   },
+  // `vite preview` (used by the end-to-end tests) serves the build with the same proxy.
+  preview: {
+    proxy: {
+      '/api': backendUrl,
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,
+    include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
     coverage: {
