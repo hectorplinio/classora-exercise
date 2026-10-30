@@ -7,7 +7,7 @@ import pytest
 from tests.utils.builders import a_user
 from tickets.domain.ticket.model import Severity, Ticket, TicketState
 from tickets.domain.user.model import Permission
-from tickets.infrastructure.output.ticket.in_memory.seed import build_seed_tickets
+from tickets.infrastructure.output.ticket.seed import build_seed_tickets
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 TICKETS = build_seed_tickets(NOW)

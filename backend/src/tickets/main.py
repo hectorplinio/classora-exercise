@@ -19,7 +19,7 @@ from tickets.infrastructure.input.fastapi.app import AsgiApp, create_rest_app
 from tickets.infrastructure.input.fastapi.shared.dependencies import Dependencies
 from tickets.infrastructure.output.clock.system_clock import SystemClock
 from tickets.infrastructure.output.ticket.in_memory.repository import InMemoryTicketRepository
-from tickets.infrastructure.output.ticket.in_memory.seed import build_seed_tickets
+from tickets.infrastructure.output.ticket.seed import build_seed_tickets
 
 # backend/src/tickets/main.py → repository root. Override with MINI_TICKETS_CONTRACT (e.g. Docker).
 _DEFAULT_CONTRACT = Path(__file__).resolve().parents[3] / "contract" / "openapi-rest.yml"
