@@ -1,0 +1,524 @@
+{
+  "info": {
+    "name": "Mini Tickets",
+    "description": "Mini Tickets API (Classora technical test). Select an environment to choose the profile: the collection pre-request script sends X-User-Team and X-User-Permissions. Start the backend with `uv run uvicorn tickets.main:create_app --factory` from `backend/`. Tickets come from the deterministic seed: ids are the same on every start, changes are lost on restart.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Simulated identity of the selected environment (Developer, Team lead, Security, Anonymous).",
+          "const team = pm.environment.get('team');",
+          "const permissions = pm.environment.get('permissions');",
+          "if (team) { pm.request.headers.upsert({ key: 'X-User-Team', value: team }); }",
+          "if (permissions) { pm.request.headers.upsert({ key: 'X-User-Permissions', value: permissions }); }",
+          "",
+          "// Dates relative to today (UTC), for the due date requests.",
+          "const day = 24 * 60 * 60 * 1000;",
+          "const isoDate = (ms) => new Date(ms).toISOString().slice(0, 10);",
+          "pm.variables.set('today', isoDate(Date.now()));",
+          "pm.variables.set('tomorrow', isoDate(Date.now() + day));",
+          "pm.variables.set('yesterday', isoDate(Date.now() - day));"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get current user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me"
+              ]
+            },
+            "description": "Team and permissions from the headers. Anonymous \u2192 401."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets \u00b7 search",
+      "item": [
+        {
+          "name": "Search tickets (defaults)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ]
+            },
+            "description": "First page, 20 per page, LAST_MODIFIED DESC. totalElements only counts visible tickets: compare Developer and Security."
+          }
+        },
+        {
+          "name": "Search with filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?q=log&state=REPORTED&state=IN_PROGRESS&severity=HIGH&sort=TARGET_DATE&direction=ASC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "log"
+                },
+                {
+                  "key": "state",
+                  "value": "REPORTED"
+                },
+                {
+                  "key": "state",
+                  "value": "IN_PROGRESS"
+                },
+                {
+                  "key": "severity",
+                  "value": "HIGH"
+                },
+                {
+                  "key": "sort",
+                  "value": "TARGET_DATE"
+                },
+                {
+                  "key": "direction",
+                  "value": "ASC"
+                }
+              ]
+            },
+            "description": "Case-insensitive text over key/title/asset, several states, one severity."
+          }
+        },
+        {
+          "name": "Search expired tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?expiredOnly=true&sort=TARGET_DATE&direction=ASC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "expiredOnly",
+                  "value": "true"
+                },
+                {
+                  "key": "sort",
+                  "value": "TARGET_DATE"
+                },
+                {
+                  "key": "direction",
+                  "value": "ASC"
+                }
+              ]
+            },
+            "description": "Not DONE and targetDate before today."
+          }
+        },
+        {
+          "name": "Search by assigned team",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?assignedTeam=Identity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "assignedTeam",
+                  "value": "Identity"
+                }
+              ]
+            },
+            "description": "Exact match on assignedTeam."
+          }
+        },
+        {
+          "name": "Search second page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?offset=20&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "20"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Pages never overlap: ties are broken by id."
+          }
+        },
+        {
+          "name": "Search with invalid parameters (422)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets?limit=101&state=FOO&direction=asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "101"
+                },
+                {
+                  "key": "state",
+                  "value": "FOO"
+                },
+                {
+                  "key": "direction",
+                  "value": "asc"
+                }
+              ]
+            },
+            "description": "Problem Details with one invalidParams entry per wrong parameter."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets \u00b7 detail",
+      "item": [
+        {
+          "name": "Get ticket SEC-1024",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11"
+              ]
+            },
+            "description": "The ticket of the statement. 200 for every profile."
+          }
+        },
+        {
+          "name": "Get restricted ticket SEC-1107",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/6a5b9d1c-5487-56a5-9b76-3b0609d0d922",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "6a5b9d1c-5487-56a5-9b76-3b0609d0d922"
+              ]
+            },
+            "description": "Restricted ticket of Platform. Developer / Team lead \u2192 404 (existence not leaked). Security \u2192 200."
+          }
+        },
+        {
+          "name": "Get expired ticket SEC-1105",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/02585f90-23ff-5f80-ba53-e97be1f302f2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "02585f90-23ff-5f80-ba53-e97be1f302f2"
+              ]
+            },
+            "description": "expired: true, computed by the server."
+          }
+        },
+        {
+          "name": "Get missing ticket (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": "Same response shape as a restricted ticket."
+          }
+        },
+        {
+          "name": "Get malformed id (422)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/not-a-uuid",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "not-a-uuid"
+              ]
+            },
+            "description": "invalidParams: id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets \u00b7 set due date",
+      "item": [
+        {
+          "name": "Set due date SEC-1024",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11"
+              ]
+            },
+            "description": "Team lead / Security \u2192 200, REPORTED becomes IN_PROGRESS, lastModified updated. Developer \u2192 403.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dueDate\": \"{{tomorrow}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set due date on a DONE ticket (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/8c14bca6-2e77-5b22-9161-d82c864b2df4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "8c14bca6-2e77-5b22-9161-d82c864b2df4"
+              ]
+            },
+            "description": "SEC-1115 is DONE. Team lead \u2192 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dueDate\": \"{{tomorrow}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set due date in the past (422)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11"
+              ]
+            },
+            "description": "Team lead \u2192 422 with invalidParams: dueDate.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dueDate\": \"{{yesterday}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set due date on restricted ticket SEC-1128",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/4eb56f37-4f83-5ced-a2c5-8337b5ac9c02",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "4eb56f37-4f83-5ced-a2c5-8337b5ac9c02"
+              ]
+            },
+            "description": "Restricted REPORTED ticket of Mobile. Team lead \u2192 404. Security \u2192 200 and IN_PROGRESS.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dueDate\": \"{{tomorrow}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Set due date with a malformed body (422)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tickets/b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tickets",
+                "b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11"
+              ]
+            },
+            "description": "Wrong date format and an unknown field.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dueDate\": \"15/11/2026\",\n  \"state\": \"DONE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
