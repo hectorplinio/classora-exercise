@@ -43,8 +43,8 @@ jobs:
         run: uv run mypy
       - name: Check architecture rules
         run: uv run lint-imports
-      - name: Test
-        run: uv run pytest
+      - name: Test (100% line and branch coverage required)
+        run: uv run pytest --cov
       # Same job (keeps the required check name stable); separate venv for the minimum version.
       - name: Test on Python 3.11 (minimum supported)
         env:
