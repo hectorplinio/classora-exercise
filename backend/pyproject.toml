@@ -64,12 +64,13 @@ layers = [
     "tickets.infrastructure",
     "tickets.application",
     "tickets.domain",
+    "tickets.shared",
 ]
 
 [[tool.importlinter.contracts]]
-name = "Core (domain and application) is framework-free"
+name = "Core (domain, application, shared) is framework-free"
 type = "forbidden"
-source_modules = ["tickets.domain", "tickets.application"]
+source_modules = ["tickets.domain", "tickets.application", "tickets.shared"]
 forbidden_modules = ["fastapi", "pydantic", "starlette", "uvicorn"]
 
 [[tool.importlinter.contracts]]
