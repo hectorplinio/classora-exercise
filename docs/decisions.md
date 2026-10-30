@@ -166,3 +166,23 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** `InMemoryTicketRepository` guards its dict with a `threading.Lock`, and `list_all` returns a copy. `SystemClock` is the only code that reads the system time.
 
 **Consequences.** Individual operations are safe. Two concurrent PATCHes on the same ticket are last-write-wins: there is no optimistic locking (a `version` field checked on save). Acceptable for an in-memory exercise; listed under "what I would do with more time".
+
+## 22. REST adapter: controllers like the reference project, plus handlers for what never reaches them
+
+**Decision.** One file per endpoint (`<action>_controller.py`) registered in a per-entity `router.py` with `add_api_route`. Each controller wraps its use case call in `try/except` and returns `handle_controller_error(e, logger)`, which maps the error class to a status with `HTTP_STATUS_CODE_BY_ERROR` and builds a Problem Details body; the cause and the traceback only go to the logs. Errors raised before a controller runs (Pydantic request validation, missing identity header, unknown routes, unexpected exceptions) are handled by app-level exception handlers that build the same body. Use cases reach controllers through `Annotated[..., Depends(...)]` providers that read the `Dependencies` built by `main.py` (no DI container, see decision 19).
+
+**Consequences.** Every error, wherever it happens, has the contract's `application/problem+json` shape. Routes declare their Problem responses, so FastAPI no longer adds its own `HTTPValidationError` schema to `/openapi.json`.
+
+## 23. Problem titles are fixed RFC 9110 phrases
+
+**Context.** `http.HTTPStatus(422).phrase` is "Unprocessable Entity" in Python 3.11 and "Unprocessable Content" from 3.13. The CI step on 3.11 caught the difference.
+
+**Decision.** Problem titles come from a fixed table of RFC 9110 phrases, not from the standard library.
+
+## 24. Identity headers and `GET /me`
+
+**Decision.** `X-User-Team` is required (blank or missing → 401). `X-User-Permissions` is a comma-separated list; values are trimmed and unknown ones are ignored, so a client cannot invent permissions. `GET /me` has no use case: the identity is resolved by a FastAPI dependency and the controller only maps it.
+
+## 25. `expired` is computed in the response mapping with the server clock
+
+**Decision.** The REST DTO calls the domain rule `ticket.is_expired(today)` with `today` from the injected `Clock`. The rule keeps a single owner (the domain); the adapter only decides when to evaluate it.
