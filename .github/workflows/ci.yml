@@ -10,13 +10,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Placeholder jobs: each one is filled in by the PR that introduces its part.
-  # They exist from the start so branch protection can require them.
+  # Every job exists from the start so branch protection can require it; placeholders are
+  # filled in by the PR that introduces their part.
   contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       - name: Lint contract
@@ -24,12 +24,35 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "Backend checks added in chore/backend-setup"
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Install dependencies
+        run: uv sync --locked
+      - name: Lint
+        run: uv run ruff check
+      - name: Check formatting
+        run: uv run ruff format --check
+      - name: Type check
+        run: uv run mypy
+      - name: Check architecture rules
+        run: uv run lint-imports
+      - name: Test
+        run: uv run pytest
+      # Same job (keeps the required check name stable); separate venv for the minimum version.
+      - name: Test on Python 3.11 (minimum supported)
+        env:
+          UV_PROJECT_ENVIRONMENT: .venv-py311
+        run: uv run --locked --python 3.11 pytest
 
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: echo "Frontend checks added in chore/frontend-setup"
