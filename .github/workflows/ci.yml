@@ -74,7 +74,7 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint
-      - name: Test
-        run: npm test
+      - name: Test (100% coverage required)
+        run: npm run test:coverage
       - name: Build
         run: npx vite build
