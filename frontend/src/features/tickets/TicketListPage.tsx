@@ -1,4 +1,5 @@
 import { ErrorMessage } from '../../shared/ErrorMessage.tsx';
+import { ExpiredCount } from './ExpiredCount.tsx';
 import { Pagination } from './Pagination.tsx';
 import { TicketFilters } from './TicketFilters.tsx';
 import { TicketTable } from './TicketTable.tsx';
@@ -15,6 +16,7 @@ export function TicketListPage() {
         Tickets
       </h2>
       <TicketFilters params={params} onChange={setFilters} onReset={reset} />
+      <ExpiredCount params={params} />
       {error ? (
         <ErrorMessage error={error} />
       ) : isPending ? (
