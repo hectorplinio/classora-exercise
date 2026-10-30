@@ -254,3 +254,29 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** `unwrap()` turns a failed SDK call into an `ApiError` with the HTTP status and the Problem Details body, validated with the contract's Zod schema (or `null` if the body does not follow it; status `0` if the server could not be reached). `errorMessage()` maps the status to a Spanish UI message, distinguishing 403, 404, 409 and 422 (plus 401 and network errors). Screens that need more context (e.g. the due date form in a later PR) can read `problem.invalidParams`.
 
 **Consequences.** Components never parse HTTP errors themselves; the mapping is a pure function with its own tests.
+
+## 36. Tailwind CSS for styling
+
+**Context.** The statement forbids component libraries with ready-made tables or forms and asks for semantic HTML and simple CSS.
+
+**Decision.** Tailwind CSS v4 (Vite plugin, no config file), with a few theme colours for severities. It is a build-time CSS tool, not a component library: every table, form and control is our own semantic HTML.
+
+**Consequences.** Styles live next to the markup, the shipped CSS only contains the classes in use, and there is no runtime dependency.
+
+## 37. List parameters: the URL is the single source of truth
+
+**Decision.** `useTicketListParams` is a thin layer over React Router's search params; the logic lives in two pure functions. `parseTicketListParams` normalizes any URL to valid parameters: an invalid number, enum or flag falls back to its default (`?offset=-5&limit=9999&state=FOO` is the default list), invalid and repeated values are dropped from multi-value filters, and texts are cut to the contract limits. `toSearchParams` writes only the values that differ from the defaults, in a fixed order. Changing a filter or the order goes back to `offset=0`; changing the page keeps the filters. Each change pushes a history entry (back/forward work) unless the URL stays the same.
+
+**Consequences.** A manipulated or stale link never breaks the page nor reaches the backend unnormalized, URLs are clean and canonical, and the same parameters always produce the same query key.
+
+## 38. State and severity filters are sets, not `ALL`
+
+**Context.** The React statement models `state` and `severity` as one value with `ALL` as default. The contract (decision 4) has multi-value filters of real enum values, with every value as the default.
+
+**Decision.** The hook follows the contract: `state` and `severity` are arrays, "every value selected" is the default and is not written to the URL. In the UI they are checkbox groups; the last checked option cannot be unchecked (an empty selection has no meaning).
+
+## 39. Search debounce in the input, previous page kept per profile
+
+**Decision.** `DebouncedInput` keeps the typed text locally and commits it after 300 ms without typing. The hook only maps the URL: putting the debounce there would make the URL (and the back button) lag behind or duplicate state. While a new page or filter loads, the table keeps the previous rows dimmed (`placeholderData`), but only if they belong to the same profile, so a profile switch never shows the previous profile's tickets.
+
+**Consequences.** One request per pause in typing, not per keystroke; pagination does not flash an empty table.

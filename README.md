@@ -135,6 +135,8 @@ npm run dev
 
 The app is at `http://localhost:5173`. The profile selector in the header (Developer, Team lead, Security) sets the identity headers of every request; switching profile clears the cached data and reloads it with the new identity.
 
+The ticket list (`/tickets`) keeps its filters, search, order and page in the URL, so a list can be shared as a link and the browser back/forward buttons work. Styling uses Tailwind CSS (a build-time tool, not a component library): tables, forms and controls are plain semantic HTML.
+
 ### Connection to the backend
 
 In development the browser only talks to Vite, which proxies `/api` to the backend (`http://localhost:8000`, or `MINI_TICKETS_BACKEND_URL`). Requests are same-origin, so the backend needs no CORS configuration and the custom identity headers do not trigger preflight requests.
@@ -172,6 +174,7 @@ When the two statements disagree, the Full Stack one wins (it says so itself):
 | `assignedTeam` | `string \| null` | always present |
 | `title`, `creatorTeam`, `restricted`, `createdAt` | not in the ticket | in the ticket |
 | Operations | `GET /tickets`, `PATCH /tickets/{id}`, `GET /me` | plus `GET /tickets/{id}` |
+| `state`, `severity` filters | one value, `ALL` by default | several values, every value by default (see decision 38) |
 
 Additions not required by either statement, documented in `docs/decisions.md`: `401` when the identity header is missing, `403` without `tickets.read`, a server-computed `expired` flag, and `invalidParams` in 422 Problem Details.
 
