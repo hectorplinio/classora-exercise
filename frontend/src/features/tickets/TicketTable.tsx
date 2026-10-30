@@ -1,3 +1,5 @@
+import { Link, useLocation } from 'react-router';
+
 import type { SortDirection, Ticket, TicketSortField } from '../../api/generated/types.gen.ts';
 import { formatDate, formatDateTime } from '../../shared/dates.ts';
 import { ExpiredBadge, SeverityBadge, StateBadge } from './Badges.tsx';
@@ -14,6 +16,8 @@ type Props = {
 const cell = 'px-3 py-2 text-left';
 
 export function TicketTable({ tickets, sort, direction, onSort, busy }: Props) {
+  // The detail page links back to the list with the same filters.
+  const { search } = useLocation();
   const sortable = (field: TicketSortField) => (
     <SortableHeader field={field} sort={sort} direction={direction} onSort={onSort} />
   );
@@ -45,7 +49,13 @@ export function TicketTable({ tickets, sort, direction, onSort, busy }: Props) {
             tickets.map((ticket) => (
               <tr key={ticket.id} className="hover:bg-slate-50">
                 <th scope="row" className={`${cell} font-mono font-medium whitespace-nowrap`}>
-                  {ticket.key}
+                  <Link
+                    to={`/tickets/${ticket.id}`}
+                    state={{ from: search }}
+                    className="text-blue-700 hover:underline"
+                  >
+                    {ticket.key}
+                  </Link>
                 </th>
                 <td className={cell}>{ticket.title}</td>
                 <td className={`${cell} font-mono text-xs`}>{ticket.asset}</td>
