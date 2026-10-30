@@ -38,6 +38,7 @@ test('lists the tickets with their labels', async () => {
         severity: 'CRITICAL',
         expired: true,
         dueDate: '2026-12-01',
+        restricted: true,
       }),
     ]),
   );
@@ -53,6 +54,7 @@ test('lists the tickets with their labels', async () => {
   expect(cells.getByText('Caducado')).toBeInTheDocument();
   expect(cells.getByText('30/11/2026')).toBeInTheDocument();
   expect(cells.getByText('01/12/2026')).toBeInTheDocument();
+  expect(cells.getByText(/Restringido/)).toBeInTheDocument();
 });
 
 test('the request is built from the URL, normalized', async () => {
@@ -315,4 +317,18 @@ test('a slow response of a previous filter never replaces the current result', a
   expect(await screen.findByText('SEC-200')).toBeInTheDocument();
   await delay(150);
   expect(await rowKeys()).toEqual(['SEC-200']);
+});
+
+test('clicking anywhere on a row opens the ticket', async () => {
+  const ticket = aTicket({ key: 'SEC-1', title: 'Open redirect' });
+  server.use(
+    currentUserHandler,
+    ticketsHandler([ticket]),
+    http.get(apiUrl(`/tickets/${ticket.id}`), () => HttpResponse.json(ticket)),
+  );
+  renderWithProviders(<App />, { route: '/tickets' });
+
+  await userEvent.click(await screen.findByText('Open redirect'));
+
+  expect(await screen.findByRole('heading', { name: 'SEC-1 · Open redirect' })).toBeInTheDocument();
 });
