@@ -14,6 +14,13 @@ import {
 import { renderWithProviders } from '../../test/render.tsx';
 import { server } from '../../test/server.ts';
 
+/** Records the list requests, ignoring the expired count's (`expiredOnly=true&limit=1`). */
+const recordListRequests = (requests: URL[]) => (url: URL) => {
+  const isExpiredCount =
+    url.searchParams.get('expiredOnly') === 'true' && url.searchParams.get('limit') === '1';
+  if (!isExpiredCount) requests.push(url);
+};
+
 const rows = async () => {
   const table = await screen.findByRole('table');
   return within(table).getAllByRole('row').slice(1);
@@ -50,7 +57,7 @@ test('lists the tickets with their labels', async () => {
 
 test('the request is built from the URL, normalized', async () => {
   const requests: URL[] = [];
-  server.use(currentUserHandler, ticketsHandler([aTicket()], (url) => requests.push(url)));
+  server.use(currentUserHandler, ticketsHandler([aTicket()], recordListRequests(requests)));
   renderWithProviders(<App />, { route: '/tickets?offset=-5&limit=9999&state=FOO&q=log4j' });
 
   await rows();
@@ -78,7 +85,7 @@ test('the next page keeps the filters and loads the following tickets', async ()
 
 test('filtering by state sends only the selected states and returns to the first page', async () => {
   const requests: URL[] = [];
-  server.use(currentUserHandler, ticketsHandler([aTicket()], (url) => requests.push(url)));
+  server.use(currentUserHandler, ticketsHandler([aTicket()], recordListRequests(requests)));
   renderWithProviders(<App />, { route: '/tickets?offset=20' });
   await screen.findByRole('table');
 
@@ -100,7 +107,7 @@ test('the last selected state cannot be unchecked', async () => {
 
 test('clicking a column header sorts by it, and again reverses the order', async () => {
   const requests: URL[] = [];
-  server.use(currentUserHandler, ticketsHandler([aTicket()], (url) => requests.push(url)));
+  server.use(currentUserHandler, ticketsHandler([aTicket()], recordListRequests(requests)));
   renderWithProviders(<App />, { route: '/tickets' });
   await screen.findByRole('table');
 
@@ -158,7 +165,7 @@ test("switching profile never shows the previous profile's tickets", async () =>
 describe('filters', () => {
   async function renderList(route = '/tickets') {
     const requests: URL[] = [];
-    server.use(currentUserHandler, ticketsHandler([aTicket()], (url) => requests.push(url)));
+    server.use(currentUserHandler, ticketsHandler([aTicket()], recordListRequests(requests)));
     renderWithProviders(<App />, { route });
     await screen.findByRole('table');
     const lastQuery = () => requests.at(-1)?.searchParams;
@@ -253,4 +260,59 @@ describe('pagination', () => {
 
     expect(await screen.findByText('Mostrando 1–20 de 25')).toBeInTheDocument();
   });
+});
+
+test('counts the expired tickets matching the filters across every page', async () => {
+  const requests: URL[] = [];
+  const tickets = [
+    ...Array.from({ length: 30 }, () => aTicket()),
+    aTicket({ expired: true }),
+  ];
+  server.use(
+    currentUserHandler,
+    http.get(apiUrl('/tickets'), ({ request }) => {
+      const url = new URL(request.url);
+      requests.push(url);
+      const expiredOnly = url.searchParams.get('expiredOnly') === 'true';
+      const matching = expiredOnly ? tickets.filter((ticket) => ticket.expired) : tickets;
+      const offset = Number(url.searchParams.get('offset'));
+      const limit = Number(url.searchParams.get('limit'));
+      return HttpResponse.json(ticketPage(matching, offset, limit));
+    }),
+  );
+  renderWithProviders(<App />, { route: '/tickets?severity=HIGH' });
+
+  expect(await screen.findByText('1 ticket caducado')).toBeInTheDocument();
+  const countRequest = requests.find((url) => url.searchParams.get('expiredOnly') === 'true');
+  expect(countRequest?.searchParams.get('limit')).toBe('1');
+  expect(countRequest?.searchParams.getAll('severity')).toEqual(['HIGH']);
+});
+
+test('the expired count uses the plural', async () => {
+  server.use(currentUserHandler, ticketsHandler([aTicket(), aTicket()]));
+  renderWithProviders(<App />, { route: '/tickets' });
+
+  expect(await screen.findByText('2 tickets caducados')).toBeInTheDocument();
+});
+
+test('a slow response of a previous filter never replaces the current result', async () => {
+  // 4 severities (default) → SEC-400; 3 → SEC-300, slow; 2 → SEC-200, fast.
+  const keyBySeverities: Record<number, string> = { 4: 'SEC-400', 3: 'SEC-300', 2: 'SEC-200' };
+  server.use(
+    currentUserHandler,
+    http.get(apiUrl('/tickets'), async ({ request }) => {
+      const severities = new URL(request.url).searchParams.getAll('severity').length;
+      if (severities === 3) await delay(100);
+      return HttpResponse.json(ticketPage([aTicket({ key: keyBySeverities[severities] ?? '' })]));
+    }),
+  );
+  renderWithProviders(<App />, { route: '/tickets' });
+  expect(await rowKeys()).toEqual(['SEC-400']);
+
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Baja' }));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Media' }));
+
+  expect(await screen.findByText('SEC-200')).toBeInTheDocument();
+  await delay(150);
+  expect(await rowKeys()).toEqual(['SEC-200']);
 });
