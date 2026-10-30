@@ -4,7 +4,29 @@ Security tickets assigned to development teams. Technical test for Classora (Ful
 
 The API is defined first in an OpenAPI 3.0 contract; the FastAPI backend (hexagonal architecture) implements it and is checked against it, and the React frontend derives its types from it.
 
-> Work in progress: the Docker setup and the final notes are completed in their own PRs.
+## Quick start
+
+With Docker:
+
+```bash
+docker compose up --build
+```
+
+| What | Where |
+| --- | --- |
+| Application | http://localhost:4173 |
+| API documentation (the contract, with "Try it out") | http://localhost:8000/docs |
+
+Pick a profile in the header (Developer, Team lead, Security) to see the visibility and permission rules change. Data is stored in SQLite on the `tickets-data` volume, so changes survive `docker compose down`; `docker compose down -v` deletes it and the next start loads the seed again. Ports can be changed with `FRONTEND_PORT` and `BACKEND_PORT` (e.g. `FRONTEND_PORT=3000 docker compose up`).
+
+Without Docker, see [Backend](#backend) and [Frontend](#frontend): `uv` and Node.js are enough.
+
+## At a glance
+
+- **Contract first.** `contract/openapi-rest.yml` (OpenAPI 3.0.3) was written before any code and is linted with the statement's rules. The backend is tested against it (spec comparison and Schemathesis), the frontend generates its types, Zod schemas and client from it, and `/docs` serves it.
+- **Hexagonal backend**, with the dependency rules enforced by import-linter in CI: domain and use cases without FastAPI, Pydantic or storage; two interchangeable storage adapters (memory and SQLite) behind the same port.
+- **Tested on every level**: domain and use cases with test doubles, API tests for every rule of the statement, contract conformance, React components with MSW, and end-to-end tests against the real backend. 100% line and branch coverage required in CI on both sides.
+- **CI** (GitHub Actions, required before merging): contract lint, backend (lint, format, types, architecture, tests on Python 3.13 and 3.11), frontend (generated client up to date, types, lint, tests, build), end-to-end, and the Docker setup.
 
 ## Repository layout
 
@@ -17,6 +39,7 @@ The API is defined first in an OpenAPI 3.0 contract; the FastAPI backend (hexago
 | `react-senior/` | React test: code review and written answers |
 | `docs/decisions.md` | Short notes on every relevant technical decision |
 | `docs/postman/` | Postman collection and one environment per profile |
+| `docker-compose.yml` | Backend and frontend (nginx) with a volume for the SQLite database |
 
 ## Backend
 
@@ -122,6 +145,8 @@ The statement requires that what FastAPI generates does not contradict the contr
 2. **Schemathesis against the running app** (`backend/tests/contract/test_schemathesis.py`). From the contract it generates valid and invalid requests for every operation and checks: no 5xx, only documented status codes and media types, response bodies matching their schemas, invalid input rejected, valid input accepted, correct `Allow` headers. Two checks are excluded on purpose, because the contract's bearer scheme is declared but not enforced (identity is simulated with headers); "valid input is accepted" is excluded only for the PATCH, whose 409/422 business rules cannot be expressed in a schema. It found three real bugs, now fixed and covered by regression tests: a lost `Allow` header on 405, an incomplete `Allow` header when a path has several routes, and an undecodable body answered with an undocumented 400 instead of 422.
 3. **Error format** (`backend/tests/infrastructure/input/fastapi/`). Every error path (domain errors, validation, missing identity, unknown routes, unexpected exceptions) is asserted to answer `application/problem+json` with the contract's shape.
 
+On the frontend side, the types, Zod schemas and client are generated from the contract and CI fails if the committed client differs from a fresh generation; every response is parsed with its Zod schema at runtime, so a backend answer that broke the contract would fail at the boundary instead of inside a component. The end-to-end tests run both ends together.
+
 The served documentation is the contract itself: `/openapi.json` and `/docs` return `contract/openapi-rest.yml` (with `servers` pointing to the running instance), not the generated spec, so clients see exactly what was agreed.
 
 ## Frontend
@@ -206,6 +231,22 @@ When the two statements disagree, the Full Stack one wins (it says so itself):
 
 Additions not required by either statement, documented in `docs/decisions.md`: `401` when the identity header is missing, `403` without `tickets.read`, a server-computed `expired` flag, and `invalidParams` in 422 Problem Details.
 
+## UI language
+
+The code, the documentation and the API are in English. The user interface is in Spanish, as in the statement ("En curso", "Fijar fecha compromiso", "No encontrado"); seed data (ticket titles) is in English.
+
 ## What I would do with more time
 
-_Completed in the last PR._
+- **Optimistic concurrency control.** Two users changing the same ticket at once: today the last write wins. `ETag` / `If-Match` on the PATCH (412 on a stale version) would make the conflict visible.
+- **Real authentication.** The contract already declares a bearer scheme; validating a JWT (and deriving team and permissions from its claims) would replace the simulated headers without touching the use cases.
+- **Migrations** (Alembic) if the SQLite schema starts to change, and a server database if several instances had to share data.
+- **The due date action in each row** of the list, as the React statement suggests: the optimistic hook already updates every cached list.
+- **Automated accessibility checks** (axe) in the end-to-end tests, and more browsers than Chromium.
+- **MSW handlers generated from the contract**, instead of written by hand, so the frontend tests cannot drift from it either.
+- **Observability**: structured logs with a request id, and metrics on the API.
+
+## What was left out, and why
+
+- **A real login**: the statement asks for simulated identity headers.
+- **An external database**: the statement allows memory or SQLite and says none is needed; SQLite keeps the setup to one command (decision 44).
+- **Cross-browser end-to-end tests**: the scenarios test the integration of frontend and backend, not rendering differences.

@@ -321,3 +321,9 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** A restrained, editorial look: neutral greys, black as the only accent, colour reserved for meaning (severity dots, state badges, expiry). Reusable pieces are Tailwind `@utility` classes (`card`, `field`, `btn-primary`, `btn-secondary`, `label`) and inline SVG icons, hidden from assistive technology. Filters are real checkboxes styled as chips; the table shows title and asset together, marks restricted tickets, and the whole row opens the detail (the key stays the accessible link). Loading states are skeletons with an `aria-busy` region and a hidden "Cargando…".
 
 **Consequences.** No new dependencies; the accessible names and roles did not change, so the unit and end-to-end tests guard the redesign. Unit tests do not process CSS: the end-to-end tests, which build the app, do.
+
+## 46. Docker setup: nginx in front, SQLite on a volume
+
+**Decision.** `docker compose up --build` runs two services. The backend image (Python slim, dependencies installed with uv from the lock file, non-root user, healthcheck) uses SQLite on the `tickets-data` volume, so changes survive restarts and `down -v` starts over from the seed. The frontend image builds the bundle with Node and serves it with nginx, which also proxies `/api` to the backend: the same single-origin setup as the Vite proxy in development, so production needs no CORS either. nginx sends every client route to `index.html` and caches the hashed assets for a year. Base images and uv are pinned to exact versions. A CI job builds and starts the stack and calls the API through nginx.
+
+**Consequences.** One command to run everything, with the same URLs and identity headers as in development; the Docker setup cannot silently break.
