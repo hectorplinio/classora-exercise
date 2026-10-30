@@ -1,9 +1,9 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HttpResponse, http } from 'msw';
+import { HttpResponse, delay, http } from 'msw';
 
 import { App } from '../../App.tsx';
-import type { Ticket } from '../../api/generated/types.gen.ts';
+import type { Ticket, TicketPage } from '../../api/generated/types.gen.ts';
 import { aTicket } from '../../test/builders.ts';
 import { apiUrl, currentUserHandler, problem, ticketsHandler } from '../../test/handlers.ts';
 import { renderWithProviders } from '../../test/render.tsx';
@@ -173,4 +173,102 @@ test('saving a date invalidates every cached list of the profile', async () => {
   const lists = queryClient.getQueryCache().findAll({ queryKey: ['team-lead', 'tickets'] });
   expect(lists).not.toHaveLength(0);
   expect(lists.every((query) => query.state.isInvalidated)).toBe(true);
+});
+
+describe('optimistic update', () => {
+  /** PATCH answering after `ms`, with `respond` (the server's ticket by default). */
+  function slowPatch(ticket: Ticket, respond: () => Response | Promise<Response>, ms = 100) {
+    return http.patch(apiUrl(`/tickets/${ticket.id}`), async () => {
+      await delay(ms);
+      return respond();
+    });
+  }
+
+  test('the new date and "En curso" show before the server answers', async () => {
+    selectTeamLead();
+    const ticket = aTicket({ state: 'REPORTED' });
+    server.use(
+      currentUserHandler,
+      slowPatch(ticket, () =>
+        HttpResponse.json({ ...ticket, state: 'IN_PROGRESS', dueDate: FUTURE }),
+      ),
+      ...ticketHandlers(ticket),
+    );
+    renderWithProviders(<App />, { route: `/tickets/${ticket.id}` });
+
+    await setDueDate(FUTURE);
+
+    expect(screen.getByRole('button', { name: 'Guardando…' })).toBeDisabled();
+    expect(field('Estado')).toHaveTextContent('En curso');
+    expect(field('Fecha compromiso')).toHaveTextContent('15/01/2099');
+    expect(await screen.findByRole('status')).toHaveTextContent('Fecha compromiso guardada.');
+  });
+
+  test('if the server fails, the ticket goes back to what it was and the user is told', async () => {
+    selectTeamLead();
+    const ticket = aTicket({ state: 'REPORTED' });
+    server.use(currentUserHandler, slowPatch(ticket, () => problem(409)), ...ticketHandlers(ticket));
+    renderWithProviders(<App />, { route: `/tickets/${ticket.id}` });
+
+    await setDueDate(FUTURE);
+    expect(field('Estado')).toHaveTextContent('En curso');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La acción no es posible en el estado actual del ticket.',
+    );
+    expect(field('Estado')).toHaveTextContent('Reportado');
+    expect(field('Fecha compromiso')).toHaveTextContent('—');
+  });
+
+  test('every cached list containing the ticket is updated at once, and reverted on error', async () => {
+    selectTeamLead();
+    const ticket = aTicket({ key: 'SEC-1', state: 'REPORTED' });
+    const other = aTicket({ key: 'SEC-2', state: 'REPORTED' });
+    let fail = false;
+    server.use(
+      currentUserHandler,
+      ticketsHandler([ticket, other]),
+      slowPatch(ticket, () =>
+        fail ? problem(403) : HttpResponse.json({ ...ticket, state: 'IN_PROGRESS', dueDate: FUTURE }),
+      ),
+      ...ticketHandlers(ticket),
+    );
+    const { queryClient } = renderWithProviders(<App />, { route: '/tickets' });
+    await userEvent.click(await screen.findByRole('link', { name: 'SEC-1' }));
+    const cachedRows = () =>
+      queryClient
+        .getQueriesData<TicketPage>({ queryKey: ['team-lead', 'tickets'] })
+        .flatMap(([, page]) => page?.data ?? [])
+        .map(({ state, dueDate }) => ({ state, dueDate }));
+
+    fail = true;
+    await setDueDate(FUTURE);
+    expect(cachedRows()).toContainEqual({ state: 'IN_PROGRESS', dueDate: FUTURE });
+    expect(cachedRows()).toContainEqual({ state: 'REPORTED', dueDate: null });
+    await screen.findByRole('alert');
+
+    expect(cachedRows()).not.toContainEqual({ state: 'IN_PROGRESS', dueDate: FUTURE });
+  });
+
+  test('a 422 on the date is shown on the field', async () => {
+    selectTeamLead();
+    const ticket = aTicket();
+    server.use(
+      currentUserHandler,
+      http.patch(apiUrl(`/tickets/${ticket.id}`), () =>
+        problem(422, { invalidParams: [{ name: 'dueDate', reason: 'Must be 2026-10-31 or later.' }] }),
+      ),
+      ...ticketHandlers(ticket),
+    );
+    renderWithProviders(<App />, { route: `/tickets/${ticket.id}` });
+
+    await setDueDate(FUTURE);
+
+    expect(await screen.findByText('La fecha no puede ser anterior a hoy.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Fecha compromiso', { exact: true })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
