@@ -76,7 +76,7 @@ README.md
 
 ## Frontend rules
 
-- Vite + React 18 + strict TypeScript. Allowed libraries only: React Router, TanStack Query, Zod, React Hook Form, Vitest, Testing Library, MSW (+ Playwright for e2e, + a codegen tool for the contract). **No component libraries** with ready-made tables or forms. Semantic HTML and simple CSS.
+- Vite + React 18 + strict TypeScript. Allowed libraries only: React Router, TanStack Query, Zod, React Hook Form, Vitest, Testing Library, MSW (+ Playwright for e2e, + a codegen tool for the contract, + Tailwind CSS for styling). **No component libraries** with ready-made tables or forms. Semantic HTML styled with Tailwind utility classes.
 - Types and API client are **derived from the contract** (generated), never written by hand. Responses are validated with Zod at the boundary. CI regenerates and fails if there is a diff.
 - Dev connection to the backend through the **Vite proxy** (same origin, no CORS).
 - The current profile is part of every query key; switching profile clears the cache.
