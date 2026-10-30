@@ -111,3 +111,19 @@ jobs:
           name: playwright-report
           path: frontend/playwright-report
           retention-days: 7
+
+  # The Docker setup builds and starts: the app answers through nginx and the API is healthy.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and start
+        run: docker compose up --build --detach --wait
+      - name: Smoke test
+        run: |
+          curl --fail --silent http://localhost:4173/ > /dev/null
+          curl --fail --silent http://localhost:4173/api/v1/me \
+            -H 'X-User-Team: Payments' -H 'X-User-Permissions: tickets.read'
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
