@@ -45,9 +45,9 @@ README.md
   - `domain/`: entities, value objects, business rules (visibility, expiry, due date transition) and domain errors. **No imports from FastAPI, Pydantic or persistence.**
   - `application/ports/`: outbound interfaces (`TicketRepository`, `Clock`), defined in the core.
   - `application/use_cases/`: one use case per operation (`SearchTickets`, `GetTicket`, `SetTicketDueDate`) orchestrating the domain through ports.
-  - `adapters/inbound/rest/`: FastAPI router, own DTOs (camelCase via Pydantic aliases), header-based user, domain error → HTTP translation.
-  - `adapters/outbound/persistence/`: in-memory repository and seed.
-  - `bootstrap.py`: the **single composition root**.
+  - `infrastructure/input/fastapi/`: input adapter, the only module that imports FastAPI. App factory exposed as an `AsgiApp` protocol, router, own DTOs (camelCase via Pydantic aliases), header-based user, domain error → HTTP translation.
+  - `infrastructure/output/persistence/`: output adapter. In-memory repository and seed.
+  - `main.py`: the **single composition root**. Wires adapters to use cases; never imports FastAPI.
 - Never call `date.today()` or `datetime.now()` outside the `Clock` adapter. All dates in UTC.
 - Errors use **Problem Details (RFC 9457)** with `application/problem+json`, including FastAPI's validation errors (replace the default 422 format).
 - Tests:
@@ -82,6 +82,6 @@ README.md
 ## Commands
 
 Keep these working and listed in the README:
-- Backend: `uv run pytest`, `uv run ruff check`, `uv run mypy`, `uv run uvicorn ...`
+- Backend: `uv run pytest`, `uv run ruff check`, `uv run mypy`, `uv run lint-imports`, `uv run uvicorn tickets.main:create_app --factory`
 - Frontend: `npm run dev`, `npm run test`, `npm run typecheck`, `npm run lint`, `npm run generate:api`
 - E2E: `npx playwright test`

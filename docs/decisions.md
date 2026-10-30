@@ -69,3 +69,31 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** `422`: the id is declared as `format: uuid`, so a malformed one is an invalid parameter, consistent with the list endpoint. `404` is reserved for well-formed ids that do not exist or are not visible.
 
 **Consequences.** The frontend detail page treats both `404` and `422` on the id as "not found" for the user.
+
+## 10. Hexagonal architecture enforced by import-linter
+
+**Context.** The hexagonal architecture is mandatory. Folder names alone do not stop a domain module from importing FastAPI or a use case from importing the in-memory repository.
+
+**Decision.** `import-linter` contracts in `backend/pyproject.toml`, checked in CI:
+- layers `main → infrastructure → application → domain`: an inner layer never imports an outer one;
+- `domain` and `application` cannot import `fastapi`, `pydantic`, `starlette` or `uvicorn`;
+- input and output adapters are independent of each other;
+- only the FastAPI input adapter (`infrastructure/input/fastapi`) imports the web framework. It exposes the app as an `AsgiApp` protocol (ASGI is the standard interface between Python servers and frameworks), so `main.py` only wires and never references FastAPI.
+
+**Consequences.** A dependency in the wrong direction fails CI. The contracts were verified with deliberately forbidden imports. Swapping persistence (SQLite, MongoDB) means a new output adapter plus a change in `main.py`, nothing else.
+
+## 11. uv for the Python toolchain
+
+**Context.** The statement does not mandate a package manager. Poetry and uv are both common.
+
+**Decision.** uv: one tool for the Python version, virtualenv, dependencies and lockfile; standard `pyproject.toml` metadata (PEP 621, dependency groups from PEP 735); fast installs in CI. Same vendor as `ruff`.
+
+**Consequences.** `uv sync` reproduces the exact environment from `uv.lock`; CI runs `uv sync --locked` and fails if the lockfile is stale.
+
+## 12. `infrastructure/input|output` for the adapters
+
+**Context.** Hexagonal adapters are commonly grouped either as `adapters/inbound|outbound` (Cockburn's "ports and adapters" vocabulary) or as `infrastructure/input|output` (common in DDD-style codebases).
+
+**Decision.** `infrastructure/input` (driving adapters) and `infrastructure/output` (driven adapters). Inside them, each adapter is named after its technology: `input/fastapi`, `output/persistence` (in-memory). Ports stay in `application/ports`, owned by the core.
+
+**Consequences.** Replacing a technology means adding a sibling folder (e.g. `input/litestar`, `output/mongodb`) and switching the wiring in `main.py`. The dependency rules are enforced by import-linter (decision 10). Inside `input/fastapi`, `from fastapi import ...` still resolves to the library because Python 3 imports are absolute.
