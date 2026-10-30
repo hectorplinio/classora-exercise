@@ -4,7 +4,7 @@ Security tickets assigned to development teams. Technical test for Classora (Ful
 
 The API is defined first in an OpenAPI 3.0 contract; the FastAPI backend (hexagonal architecture) implements it and is checked against it, and the React frontend derives its types from it.
 
-> Work in progress: the frontend, end-to-end tests and Docker sections are completed in their own PRs.
+> Work in progress: the Docker setup and the final notes are completed in their own PRs.
 
 ## Repository layout
 
@@ -161,7 +161,21 @@ From `frontend/`:
 
 ## End-to-end tests
 
-_Completed in the e2e PR._
+Playwright drives the real application: it starts the backend (fresh in-memory seed on every run) and serves the production build of the frontend with `vite preview`, on their own ports (8100 and 5180), so a running dev server is never reused. No mocks.
+
+```bash
+cd frontend
+npx playwright install chromium   # once
+npm run test:e2e
+```
+
+The tests (`frontend/e2e/tickets.spec.ts`) cover the integration scenarios of the statement:
+
+- a profile without `tickets.update` (Developer) does not see "Fijar fecha compromiso";
+- a profile with it (Team lead) sets the due date and the ticket becomes "En curso", in the detail and in the list;
+- a restricted ticket of another team (SEC-1128) is listed for Security but not for Developer, and its detail shows "No encontrado".
+
+They run in CI in the `e2e` job; on failure the Playwright report (with traces) is uploaded as an artifact.
 
 ## Technical decisions
 

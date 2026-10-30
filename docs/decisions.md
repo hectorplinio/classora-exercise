@@ -295,3 +295,9 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** As in the backend (`pytest --cov`), the frontend requires 100% line, branch and function coverage in CI (`npm run test:coverage`, Vitest with V8). Not measured: the generated API client (it comes from the contract and is checked by regeneration), test helpers, and `main.tsx` (the bootstrap, exercised by the end-to-end tests).
 
 **Consequences.** Coverage is a floor, not the goal: measuring it found real gaps (the filters form wired to the URL, previous/first page, unavailable storage), now tested. A new branch without a test fails the build.
+
+## 42. End-to-end tests against the real backend and the production build
+
+**Decision.** Playwright starts the backend and serves the frontend's production build with `vite preview` (which proxies `/api` like the dev server), on dedicated ports and never reusing a running server. One worker, because the tests share one backend and one of them changes a ticket; each run starts from the deterministic seed, so the tickets used (SEC-1024, SEC-1128) are known. Scenarios check what the user sees (roles and labels), and the restricted-ticket scenario first proves the ticket exists (Security sees it) before asserting Developer does not.
+
+**Consequences.** The tests cover the whole chain (UI, proxy, identity headers, REST adapter, use cases, domain) as delivered. Serving the build instead of the dev server also avoids flakiness from Vite's on-demand dependency optimization. One browser (Chromium) is enough: the scenarios test integration, not cross-browser rendering.
