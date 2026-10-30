@@ -19,5 +19,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      // Generated code, test helpers and the bootstrap (covered by the e2e tests) are not measured.
+      exclude: ['src/api/generated/**', 'src/test/**', 'src/**/*.test.*', 'src/main.tsx'],
+      thresholds: { 100: true },
+    },
   },
 });
