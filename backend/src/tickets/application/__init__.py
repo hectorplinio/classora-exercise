@@ -1,1 +1,1 @@
-"""Application core: use cases and the ports they depend on."""
+"""Application: per-entity ports and use cases; cross-cutting ports in shared/."""
