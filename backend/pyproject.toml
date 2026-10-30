@@ -1,0 +1,86 @@
+[project]
+name = "tickets"
+version = "0.1.0"
+description = "Mini Tickets API: security tickets assigned to development teams"
+authors = [
+    { name = "Hector Plinio", email = "hectorplinio@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.162.0",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "import-linter>=2.15",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "I",       # isort
+    "B",       # bugbear
+    "UP",      # pyupgrade
+    "N",       # pep8-naming
+    "SIM",     # simplify
+    "PT",      # pytest style
+    "RUF",     # ruff-specific
+]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+
+# Architecture rules, checked in CI with `lint-imports`.
+[tool.importlinter]
+root_package = "tickets"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Hexagonal layers: outer layers depend on inner ones, never the reverse"
+type = "layers"
+layers = [
+    "tickets.main",
+    "tickets.infrastructure",
+    "tickets.application",
+    "tickets.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Core (domain and application) is framework-free"
+type = "forbidden"
+source_modules = ["tickets.domain", "tickets.application"]
+forbidden_modules = ["fastapi", "pydantic", "starlette", "uvicorn"]
+
+[[tool.importlinter.contracts]]
+name = "Input and output adapters are independent"
+type = "independence"
+modules = ["tickets.infrastructure.input", "tickets.infrastructure.output"]
+
+[[tool.importlinter.contracts]]
+name = "Only the FastAPI input adapter imports the web framework"
+type = "forbidden"
+source_modules = ["tickets.main", "tickets.infrastructure.output"]
+forbidden_modules = ["fastapi", "starlette", "uvicorn"]
+# main.py reaches FastAPI through the FastAPI adapter, which is expected; it must not import it itself.
+allow_indirect_imports = true
