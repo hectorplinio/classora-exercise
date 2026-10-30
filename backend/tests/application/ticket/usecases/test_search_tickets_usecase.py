@@ -24,7 +24,7 @@ def search(tickets: list[Ticket], user: User = READER, **params: object) -> tupl
 
     response = usecase.execute(SearchTicketsRequest(user=user, **params))  # type: ignore[arg-type]
 
-    return [ticket.key for ticket in response.tickets], response.total_elements
+    return [ticket.key for ticket in response.items], response.total_elements
 
 
 def test_requires_the_read_permission() -> None:

@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import StrEnum
 
+from tickets.application.shared.pagination import Page
 from tickets.domain.ticket.model import Severity, Ticket, TicketState
 from tickets.domain.user.model import User
 
@@ -33,10 +34,7 @@ class SearchTicketsRequest:
     direction: SortDirection = SortDirection.DESC
 
 
-@dataclass(frozen=True, slots=True)
-class SearchTicketsResponse:
-    tickets: list[Ticket]
-    total_elements: int
+SearchTicketsResponse = Page[Ticket]
 
 
 class SearchTicketsUseCaseInterface(ABC):
