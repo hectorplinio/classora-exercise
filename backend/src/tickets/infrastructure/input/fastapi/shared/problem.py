@@ -1,0 +1,70 @@
+"""Problem Details (RFC 9457): the body of every error response, as declared in the contract."""
+
+from http import HTTPStatus
+from typing import Any
+
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+
+PROBLEM_MEDIA_TYPE = "application/problem+json"
+
+# RFC 9110 reason phrases. Not taken from http.HTTPStatus: its 422 phrase depends on the Python
+# version ("Unprocessable Entity" in 3.11, "Unprocessable Content" from 3.13).
+_TITLES = {
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Not Found",
+    405: "Method Not Allowed",
+    409: "Conflict",
+    422: "Unprocessable Content",
+    500: "Internal Server Error",
+}
+
+
+def _title(status: int) -> str:
+    return _TITLES.get(status) or HTTPStatus(status).phrase
+
+
+class InvalidParam(BaseModel):
+    name: str = Field(description="Name of the parameter or dotted path of the body field.")
+    reason: str = Field(description="Why the value was rejected.")
+
+
+class Problem(BaseModel):
+    type: str = "about:blank"
+    title: str
+    status: int
+    detail: str | None = None
+    instance: str | None = None
+    invalid_params: list[InvalidParam] | None = Field(default=None, alias="invalidParams")
+
+
+def problem_response(
+    status: int, detail: str, invalid_params: list[InvalidParam] | None = None
+) -> JSONResponse:
+    problem = Problem(
+        title=_title(status),
+        status=status,
+        detail=detail,
+        invalidParams=invalid_params,
+    )
+    return JSONResponse(
+        status_code=status,
+        content=problem.model_dump(by_alias=True, exclude_none=True),
+        media_type=PROBLEM_MEDIA_TYPE,
+    )
+
+
+def problem_responses(*statuses: int) -> dict[int | str, dict[str, Any]]:
+    """OpenAPI documentation of the error responses a route can return.
+
+    Declaring 422 here also stops FastAPI from adding its own `HTTPValidationError` schema.
+    """
+    return {
+        status: {
+            "model": Problem,
+            "description": _title(status),
+            "content": {PROBLEM_MEDIA_TYPE: {}},
+        }
+        for status in statuses
+    }
