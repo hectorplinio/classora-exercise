@@ -307,3 +307,11 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 **Decision.** `useSetDueDate` applies the change (date, and `REPORTED` → `IN_PROGRESS`) at once to the cached detail and to every cached list of the profile, rolls everything back if the server fails, stores the server's ticket on success and invalidates the lists when it ends. A row that no longer matches its list's filter stays, updated, until the refetch removes it. A 422 that the server explains for `dueDate` (`invalidParams`) is shown on the field.
 
 **Consequences.** The user sees the result immediately and never a state the server rejected. The client does not reimplement the server's filtering, sorting or pagination; the price is that a non-matching row is visible for the duration of one request.
+
+## 44. SQLite as a second persistence adapter
+
+**Context.** The statement allows memory or SQLite ("no external database needed"). In memory, changes are lost on restart and only one worker can run.
+
+**Decision.** `SqliteTicketRepository` implements the same `TicketRepositoryInterface` with the standard library's `sqlite3` (no new dependency): one connection guarded by a lock, an upsert for `save`, and dates stored as ISO 8601 text. `main.py` picks it when `MINI_TICKETS_DATABASE` is set and otherwise keeps the in-memory repository. The seed moved next to both adapters and is loaded by `seed_if_empty`, which checks and inserts in one write transaction (`BEGIN IMMEDIATE`), so it runs only on the first start and never twice even if two processes start at once. One contract test suite runs against both repositories. An external database (e.g. MongoDB) was discarded: the statement does not need it, it would make running the backend depend on another service, and the data is relational.
+
+**Consequences.** Swapping the storage touched one new adapter and the composition root; the domain, the use cases and the REST adapter did not change, which is the point of the hexagonal architecture. No migrations: the schema is created if missing; a growing schema would need a migration tool (Alembic).

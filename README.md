@@ -48,7 +48,14 @@ curl -s localhost:8000/api/v1/tickets?limit=5 \
   -H 'X-User-Team: Payments' -H 'X-User-Permissions: tickets.read'
 ```
 
-Data lives in memory and is loaded from a deterministic seed of 60 tickets on start (every state and severity, several teams, restricted, expired and `asset = "None"` tickets; dates relative to today). Changes are lost on restart, and the server must run a single worker: each process would have its own copy.
+Tickets come from a deterministic seed of 60 tickets (every state and severity, several teams, restricted, expired and `asset = "None"` tickets; dates relative to the day it is loaded). Two storage options, chosen at start:
+
+| Storage | How | Behaviour |
+| --- | --- | --- |
+| In memory (default) | nothing to set | Fresh seed on every start; changes are lost on restart. Run a single worker: each process would have its own copy. |
+| SQLite | `MINI_TICKETS_DATABASE=tickets.db uv run uvicorn tickets.main:create_app --factory` | Seeded on the first start (when the file has no tickets); changes survive restarts. Delete the file to start over. |
+
+Both are output adapters of the same port (`TicketRepositoryInterface`), and one test suite runs against both: the domain, the use cases and the API do not know which one is in use. The tests and the end-to-end tests use memory, so every run starts from the same data.
 
 ### Postman
 
@@ -92,7 +99,7 @@ backend/src/tickets/
 │   │   ├── user/  ticket/      #   router.py + one <action>_controller.py per endpoint + DTOs
 │   │   └── app.py
 │   └── output/
-│       ├── ticket/in_memory/   # repository + seed
+│       ├── ticket/             # seed, in_memory/ and sqlite/ repositories
 │       └── clock/              # SystemClock: the only place that reads the time
 ├── shared/errors.py            # every error class; lowest layer
 └── main.py                     # single composition root: wires adapters to use cases
