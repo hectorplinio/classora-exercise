@@ -280,7 +280,10 @@ components:
       name: sort
       in: query
       required: false
-      description: Field to sort by. Ties are always broken by `id`.
+      description: |
+        Field to sort by. Ties are always broken by `id`. Ascending means: `KEY` in natural order
+        (`SEC-999` before `SEC-1024`), `SEVERITY` from `LOW` to `CRITICAL`, `STATE` in lifecycle order
+        (`REPORTED` to `DONE`), dates from oldest to newest.
       schema:
         $ref: "#/components/schemas/TicketSortField"
       example: TARGET_DATE
