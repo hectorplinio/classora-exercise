@@ -12,7 +12,11 @@ export function ExpiredCount({ params }: { params: TicketListParams }) {
 
   const count = data.pagination.totalElements;
   return (
-    <p className="text-sm text-slate-600">
+    <p className="inline-flex items-center gap-2 text-sm text-zinc-600">
+      <span
+        aria-hidden="true"
+        className={`size-2 rounded-full ${count > 0 ? 'bg-severity-critical' : 'bg-emerald-500'}`}
+      />
       {count === 1 ? '1 ticket caducado' : `${String(count)} tickets caducados`}
     </p>
   );
