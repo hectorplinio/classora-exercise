@@ -57,6 +57,12 @@ README.md
   - API tests for every rule in the statement.
   - Write tests first (TDD) for domain and use cases.
 
+## API conventions
+
+- Every endpoint that returns a list is paginated (`offset`/`limit`, `limit` ≤ 100) and answers `{data, pagination: {offset, limit, totalElements}}`. List use cases return `application/shared/pagination.py::Page[T]`; controllers map it with `infrastructure/input/fastapi/shared/pagination.py::PageResponse[T].from_page`.
+- Query parameters of a list endpoint live in one Pydantic model (`<Action>Query`) with the contract limits; bodies forbid extra fields.
+- Keep `docs/postman/` in sync when an endpoint is added or changed.
+
 ## Error handling
 
 - All errors live in `backend/src/tickets/shared/errors.py`. Do not create error modules per entity or per layer: reuse a class or add a new one there.

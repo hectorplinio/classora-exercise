@@ -186,3 +186,19 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 ## 25. `expired` is computed in the response mapping with the server clock
 
 **Decision.** The REST DTO calls the domain rule `ticket.is_expired(today)` with `today` from the injected `Clock`. The rule keeps a single owner (the domain); the adapter only decides when to evaluate it.
+
+## 26. One pagination shape for every list
+
+**Decision.** Every list endpoint is paginated and answers `{data, pagination: {offset, limit, totalElements}}`. The application layer has a generic `Page[T]` (`items`, `total_elements`), so `SearchTicketsResponse = Page[Ticket]`; the REST adapter has a generic `PageResponse[T]` with `from_page(page, offset, limit, item)` mapping each element. `TicketPageResponse` is just `PageResponse[TicketResponse]`.
+
+**Consequences.** A new list endpoint only defines the DTO of its element; the envelope, field names and pagination fields are always the same.
+
+## 27. Strict request validation where the contract asks for it
+
+**Decision.** The query parameters of `GET /tickets` live in one Pydantic model (`SearchTicketsQuery`) with the contract limits and camelCase names. Repeated values in `state`/`severity` are rejected (`uniqueItems`). `dueDate` only accepts `YYYY-MM-DD`: by default Pydantic would also accept a Unix timestamp or a date-time as a date. The PATCH body forbids extra fields (`additionalProperties: false`).
+
+**Consequences.** Anything the contract declares invalid gets a 422 with `invalidParams`, never a silently coerced value.
+
+## 28. Postman collection checked with Newman
+
+**Decision.** `docs/postman/` has a collection (one request per rule of the statement) and one environment per profile. The collection pre-request script sends the identity headers, so switching profile is switching environment. It was run with Newman against the real server for the four profiles; the expected codes are in `docs/postman/README.md`.
