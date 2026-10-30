@@ -1,3 +1,6 @@
+// First: configures Zod before the generated schemas are created.
+import './api/zodConfig.ts';
+
 import { QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
