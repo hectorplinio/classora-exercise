@@ -48,6 +48,7 @@ README.md
   - `infrastructure/output/<entity>/<technology>/repository.py` (e.g. `ticket/in_memory/repository.py`) and other driven adapters such as `output/clock/system_clock.py`.
   - `main.py`: the **single composition root**. Wires adapters to use cases; never imports FastAPI.
   - `shared/errors.py`: every application error (see "Error handling" below). Lowest layer: importable from everywhere, imports nothing.
+- Ports and use cases are synchronous (in-memory adapters). Dependencies are injected through constructors and wired by hand in `main.py` (no DI container library).
 - Never call `date.today()` or `datetime.now()` outside the `Clock` adapter. All dates in UTC.
 - Errors use **Problem Details (RFC 9457)** with `application/problem+json`, including FastAPI's validation errors (replace the default 422 format).
 - Tests:

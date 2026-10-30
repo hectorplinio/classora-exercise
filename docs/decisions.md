@@ -122,3 +122,31 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 `MiniTicketsError` → `DomainError` → `EntityNotFoundError` (404), `EntityConflictError` (409), `UnprocessableEntityError` (422, with `details` field → reason); and `AuthorizationError` (403). New classes (e.g. `AuthenticationError`) are added there when something raises them. The FastAPI adapter maps class → status code in a single function; anything else is a 500. Low-level exceptions are wrapped with `raise ... from e`.
 
 **Consequences.** The class carries the kind of failure, never the HTTP status, so the core stays transport-agnostic. Adding an error kind is one class plus one line in the mapping. `shared` is the lowest layer in the import-linter contracts and is framework-free. Domain `details` use domain field names (`due_date`); the adapter translates them to API names (`dueDate`).
+
+## 16. Use cases follow the reference project's shape, synchronously
+
+**Context.** The team's reference project defines, per operation, an `ABC` use case interface with its request/response (`<action>_port.py`) and an implementation with `execute` (`<action>_usecase.py`); repositories are `ABC` ports per entity. Its use cases are `async`.
+
+**Decision.** Same shape: `application/ticket/repository_port.py`, `application/shared/clock_port.py`, `application/ticket/usecases/{search_tickets,get_ticket,set_ticket_due_date}_{port,usecase}.py`. Requests and responses are frozen dataclasses (the application layer cannot import Pydantic). Everything is synchronous: the only adapters are in memory, and FastAPI runs sync endpoints in a thread pool.
+
+**Consequences.** Moving to a database with an async driver means adding `async`/`await` to the ports and use cases; the design does not change.
+
+## 17. Search rules live in the use case, not in the repository
+
+**Context.** Visibility, filters, sorting and pagination could be pushed into `TicketRepository`.
+
+**Decision.** The repository only stores tickets (`get_by_id`, `list_all`, `save`). `SearchTicketsUseCase` applies visibility first (so hidden tickets are never counted), then the filters, then a stable sort (by `id` first, then by the requested field: Python's sort is stable even with `reverse=True`), then the page slice.
+
+**Consequences.** Visibility is a domain rule and never leaks into infrastructure. With a real database these criteria would be translated into the query (e.g. a specification object), keeping the same use case contract.
+
+## 18. Sort semantics
+
+**Decision.** Ascending means: `KEY` in natural order (`SEC-999` before `SEC-1024`, which plain string order gets wrong), `SEVERITY` from `LOW` to `CRITICAL`, `STATE` in lifecycle order, dates from oldest to newest. Documented in the `sort` parameter of the contract.
+
+## 19. Dependency injection without a container library
+
+**Context.** The reference project wires everything with `dependency-injector` containers and `@inject` in controllers.
+
+**Decision.** Plain constructor injection: use cases receive their ports in `__init__`, and `main.py` builds the object graph by hand. The statement asks for a single composition point; with three use cases a container would add more code and concepts than it wires, and `Provide[...]` would couple controllers to the container.
+
+**Consequences.** Adding a container later only changes `main.py`.
