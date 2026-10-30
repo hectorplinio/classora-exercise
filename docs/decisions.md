@@ -94,6 +94,31 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 
 **Context.** Hexagonal adapters are commonly grouped either as `adapters/inbound|outbound` (Cockburn's "ports and adapters" vocabulary) or as `infrastructure/input|output` (common in DDD-style codebases).
 
-**Decision.** `infrastructure/input` (driving adapters) and `infrastructure/output` (driven adapters). Inside them, each adapter is named after its technology: `input/fastapi`, `output/persistence` (in-memory). Ports stay in `application/ports`, owned by the core.
+**Decision.** `infrastructure/input` (driving adapters) and `infrastructure/output` (driven adapters). Inside them, each adapter is named after its technology: `input/fastapi`, `output/ticket/in_memory`. Ports stay in the application layer (`application/<entity>/repository_port.py`, `application/shared/`), owned by the core.
 
 **Consequences.** Replacing a technology means adding a sibling folder (e.g. `input/litestar`, `output/mongodb`) and switching the wiring in `main.py`. The dependency rules are enforced by import-linter (decision 10). Inside `input/fastapi`, `from fastapi import ...` still resolves to the library because Python 3 imports are absolute.
+
+## 13. Immutable domain entities
+
+**Context.** The in-memory repository hands out object references. A mutable `Ticket` could be changed by a caller without going through `TicketRepository.save`, and the change would silently "persist".
+
+**Decision.** `Ticket` and `User` are frozen dataclasses. `Ticket.set_due_date` returns a new ticket; the use case saves it explicitly.
+
+**Consequences.** State changes only happen through the repository, as they would with a real database. Domain objects are safe to share between requests.
+
+## 14. The domain never reads the clock
+
+**Context.** Expiry and the due date rule depend on "today". Reading the system clock inside the domain makes the rules time-dependent and hard to test.
+
+**Decision.** Domain methods receive `today` and `now` as arguments. Only the `Clock` port (implemented in infrastructure) knows the current time, always in UTC.
+
+**Consequences.** Domain tests are deterministic, with fixed dates and no mocking of `datetime`.
+
+## 15. One shared module of error classes, mapped to HTTP in one place
+
+**Context.** Errors can be modelled as one class per rule (`TicketAlreadyDoneError`, …) or as a small set of classes per kind of failure, with the specifics in the message.
+
+**Decision.** A small hierarchy in `shared/errors.py`, raised from any layer with a free-form message:
+`MiniTicketsError` → `DomainError` → `EntityNotFoundError` (404), `EntityConflictError` (409), `UnprocessableEntityError` (422, with `details` field → reason); and `AuthorizationError` (403). New classes (e.g. `AuthenticationError`) are added there when something raises them. The FastAPI adapter maps class → status code in a single function; anything else is a 500. Low-level exceptions are wrapped with `raise ... from e`.
+
+**Consequences.** The class carries the kind of failure, never the HTTP status, so the core stays transport-agnostic. Adding an error kind is one class plus one line in the mapping. `shared` is the lowest layer in the import-linter contracts and is framework-free. Domain `details` use domain field names (`due_date`); the adapter translates them to API names (`dueDate`).
