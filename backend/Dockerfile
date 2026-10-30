@@ -1,5 +1,5 @@
 # Build context: the repository root (the backend serves contract/openapi-rest.yml).
-FROM python:3.13.9-slim-bookworm
+FROM python:3.15.0-slim-bookworm
 
 COPY --from=ghcr.io/astral-sh/uv:0.13.0 /uv /usr/local/bin/uv
 
