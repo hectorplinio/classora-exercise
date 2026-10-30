@@ -104,3 +104,4 @@ Keep these working and listed in the README:
 - Backend: `uv run pytest`, `uv run ruff check`, `uv run mypy`, `uv run lint-imports`, `uv run uvicorn tickets.main:create_app --factory`
 - Frontend: `npm run dev`, `npm run test`, `npm run typecheck`, `npm run lint`, `npm run generate:api`
 - E2E (from `frontend/`): `npm run test:e2e`
+- Everything with Docker: `docker compose up --build`
