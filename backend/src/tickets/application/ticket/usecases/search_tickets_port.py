@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import date
 from enum import StrEnum
 
 from tickets.application.shared.pagination import Page
@@ -34,7 +35,10 @@ class SearchTicketsRequest:
     direction: SortDirection = SortDirection.DESC
 
 
-SearchTicketsResponse = Page[Ticket]
+@dataclass(frozen=True, slots=True)
+class SearchTicketsResponse(Page[Ticket]):
+    # The day expiry was evaluated against: whoever presents the tickets must use the same one.
+    today: date
 
 
 class SearchTicketsUseCaseInterface(ABC):

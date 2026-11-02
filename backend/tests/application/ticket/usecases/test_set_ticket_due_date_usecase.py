@@ -35,6 +35,7 @@ def test_sets_the_due_date_and_saves_the_ticket() -> None:
     assert response.ticket.due_date == due_date
     assert response.ticket.state is TicketState.IN_PROGRESS
     assert response.ticket.last_modified == NOW
+    assert response.today == TODAY
     assert repository.get_by_id(ticket.id) == response.ticket
 
 

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import date
 from uuid import UUID
 
 from tickets.domain.ticket.model import Ticket
@@ -15,6 +16,8 @@ class GetTicketRequest:
 @dataclass(frozen=True, slots=True)
 class GetTicketResponse:
     ticket: Ticket
+    # The day to evaluate expiry against, read once per request.
+    today: date
 
 
 class GetTicketUseCaseInterface(ABC):

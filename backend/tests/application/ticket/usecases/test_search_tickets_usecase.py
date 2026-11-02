@@ -27,6 +27,14 @@ def search(tickets: list[Ticket], user: User = READER, **params: object) -> tupl
     return [ticket.key for ticket in response.items], response.total_elements
 
 
+def test_returns_the_day_it_evaluated_expiry_against() -> None:
+    usecase = SearchTicketsUseCase(FakeTicketRepository(), FixedClock(NOW))
+
+    response = usecase.execute(SearchTicketsRequest(user=READER))
+
+    assert response.today == TODAY
+
+
 def test_requires_the_read_permission() -> None:
     usecase = SearchTicketsUseCase(FakeTicketRepository(), FixedClock(NOW))
 

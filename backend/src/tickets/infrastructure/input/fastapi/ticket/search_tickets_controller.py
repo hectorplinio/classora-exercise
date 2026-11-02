@@ -6,10 +6,7 @@ from fastapi.responses import JSONResponse
 
 from tickets.application.ticket.usecases.search_tickets_port import SearchTicketsRequest
 from tickets.infrastructure.input.fastapi.shared.current_user import CurrentUserInj
-from tickets.infrastructure.input.fastapi.shared.dependencies import (
-    ClockInj,
-    SearchTicketsUseCaseInj,
-)
+from tickets.infrastructure.input.fastapi.shared.dependencies import SearchTicketsUseCaseInj
 from tickets.infrastructure.input.fastapi.shared.handle_controller_error import (
     handle_controller_error,
 )
@@ -26,7 +23,6 @@ def search_tickets_controller(
     query: Annotated[SearchTicketsQuery, Query()],
     user: CurrentUserInj,
     usecase: SearchTicketsUseCaseInj,
-    clock: ClockInj,
 ) -> TicketPageResponse | JSONResponse:
     try:
         page = usecase.execute(
@@ -43,12 +39,11 @@ def search_tickets_controller(
                 direction=query.direction,
             )
         )
-        today = clock.now().date()
         return TicketPageResponse.from_page(
             page,
             offset=query.offset,
             limit=query.limit,
-            item=lambda ticket: TicketResponse.from_domain(ticket, today=today),
+            item=lambda ticket: TicketResponse.from_domain(ticket, today=page.today),
         )
     except Exception as e:
         return handle_controller_error(e, logger)
