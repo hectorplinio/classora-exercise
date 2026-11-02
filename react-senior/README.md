@@ -193,7 +193,7 @@ The contract is linted in CI (Redocly) with the statement's rules (descriptions,
 - `onSuccess`: stores the ticket the server returned, which is the truth (`lastModified`, any rule the client does not know).
 - `onSettled`: invalidates the lists.
 
-In this application the action lives in the ticket detail rather than in each row (the Full Stack statement only asks for the action, and the detail has room for a labelled form). The hook does not depend on where it is used: because it updates every cached list, the row already shows the new date and state when the user goes back to the list.
+The action is in **each row of the list**, as the statement asks ([`RowDueDateAction`](../frontend/src/features/tickets/RowDueDateAction.tsx): a button that opens an inline date field), and also in the ticket detail ([`SetDueDateForm`](../frontend/src/features/tickets/SetDueDateForm.tsx)). Both use the same hook and the same date rules. In the row, saving closes the editor at once: the row already shows the new date and "En curso"; if the server fails, the row goes back and the error is shown under the action. The hook takes the ticket id (`useSetDueDate(id)`, one mutation per row) so each row has its own pending and error state.
 
 ### 2. Several cached lists, and a row that no longer matches the filter
 
@@ -203,7 +203,7 @@ If the row stops matching the active filter (the filter is `state=REPORTED` and 
 
 ### 3. The action only for users with `tickets.update`
 
-[`useHasPermission('tickets.update')`](../frontend/src/features/user/useHasPermission.ts) reads the permissions of `GET /me`, cached per profile; the detail renders the form only when it is true (and not for `DONE` tickets).
+[`useHasPermission('tickets.update')`](../frontend/src/features/user/useHasPermission.ts) reads the permissions of `GET /me`, cached per profile; the list renders the "Acción" column, and the detail the form, only when it is true (and not for `DONE` tickets, which would get a 409).
 
 **Hiding the button is not enough.** It is UX, not security: anyone can call the API directly, and permissions can change between loading `/me` and clicking. The backend checks the permission on every request and answers 403; the client handles that 403 like any other failure (rollback and a message). In this repository the backend tests assert the 403, and the end-to-end tests check both that the action is hidden and that the restricted ticket is a 404.
 
@@ -215,5 +215,7 @@ With **MSW** in Vitest: the handlers answer like the backend (including Problem 
 - 403, 409, 422: the message is shown, and the ticket and every cached list go back to what they were.
 - 422 on the date: the server's `invalidParams` puts the error on the field.
 - The action is not rendered for a profile without `tickets.update`.
+
+And in [`RowDueDateAction.test.tsx`](../frontend/src/features/tickets/RowDueDateAction.test.tsx), from the rows of the list: the optimistic row before the server answers, 403 and 409 reverting the row with their message, and the row that stops matching `state=REPORTED` staying until the list reloads (question 2 above).
 
 Removing the rollback or the optimistic update of the lists makes these tests fail.
