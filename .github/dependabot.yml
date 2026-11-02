@@ -1,11 +1,16 @@
 # Weekly dependency updates, one grouped PR per ecosystem. Every update goes through the same CI
 # as any change (contract, backend, frontend, end-to-end and Docker checks).
+# Major versions are ignored: they need a deliberate migration (the statement requires React 18,
+# and typescript-eslint does not support TypeScript 7 yet), so they are done by hand.
 version: 2
 updates:
   - package-ecosystem: uv
     directory: /backend
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       backend:
         patterns: ["*"]
@@ -14,6 +19,9 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend:
         patterns: ["*"]
@@ -22,6 +30,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       actions:
         patterns: ["*"]
@@ -30,6 +41,10 @@ updates:
     directories: ["/backend", "/frontend"]
     schedule:
       interval: weekly
+    # Runtime images change language versions on minors too (Python 3.13 -> 3.15): patches only.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     groups:
       docker:
         patterns: ["*"]
