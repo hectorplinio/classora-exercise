@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from tests.utils.builders import NOW
 from tests.utils.doubles import FakeTicketRepository, FixedClock
+from tickets.application.shared.clock_port import ClockInterface
 from tickets.application.ticket.usecases.get_ticket_usecase import GetTicketUseCase
 from tickets.application.ticket.usecases.search_tickets_usecase import SearchTicketsUseCase
 from tickets.application.ticket.usecases.set_ticket_due_date_usecase import (
@@ -24,16 +25,19 @@ SECURITY = {
 }
 
 
-def build_dependencies(*tickets: Ticket, now: datetime = NOW) -> Dependencies:
+def build_dependencies(
+    *tickets: Ticket, now: datetime = NOW, clock: ClockInterface | None = None
+) -> Dependencies:
     repository = FakeTicketRepository(*tickets)
-    clock = FixedClock(now)
+    clock = clock or FixedClock(now)
     return Dependencies(
-        clock=clock,
         search_tickets=SearchTicketsUseCase(repository, clock),
-        get_ticket=GetTicketUseCase(repository),
+        get_ticket=GetTicketUseCase(repository, clock),
         set_ticket_due_date=SetTicketDueDateUseCase(repository, clock),
     )
 
 
-def api_client(*tickets: Ticket, now: datetime = NOW) -> TestClient:
-    return TestClient(create_rest_app(build_dependencies(*tickets, now=now)))
+def api_client(
+    *tickets: Ticket, now: datetime = NOW, clock: ClockInterface | None = None
+) -> TestClient:
+    return TestClient(create_rest_app(build_dependencies(*tickets, now=now, clock=clock)))

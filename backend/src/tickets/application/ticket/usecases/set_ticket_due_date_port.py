@@ -17,6 +17,8 @@ class SetTicketDueDateRequest:
 @dataclass(frozen=True, slots=True)
 class SetTicketDueDateResponse:
     ticket: Ticket
+    # The day the due date was checked against: expiry must be evaluated against it too.
+    today: date
 
 
 class SetTicketDueDateUseCaseInterface(ABC):

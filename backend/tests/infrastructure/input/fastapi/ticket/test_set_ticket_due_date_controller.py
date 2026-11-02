@@ -1,10 +1,11 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
 
 from tests.utils.api import DEVELOPER, SECURITY, TEAM_LEAD, api_client
 from tests.utils.builders import NOW, TODAY, a_ticket
+from tests.utils.doubles import TickingClock
 from tickets.domain.ticket.model import TicketState
 
 
@@ -119,3 +120,18 @@ def test_malformed_body_is_unprocessable(body: dict[str, object]) -> None:
 
     assert response.status_code == 422
     assert response.json()["invalidParams"]
+
+
+def test_the_response_uses_the_same_day_as_the_rules_even_across_midnight() -> None:
+    # A due date of today is accepted at 23:59:59; the ticket, due today, is not expired then.
+    ticket = a_ticket(target_date=TODAY)
+    clock = TickingClock(
+        datetime(2026, 10, 30, 23, 59, 59, tzinfo=UTC), datetime(2026, 10, 31, 0, 0, 1, tzinfo=UTC)
+    )
+
+    response = api_client(ticket, clock=clock).patch(
+        url(ticket.id), json={"dueDate": TODAY.isoformat()}, headers=TEAM_LEAD
+    )
+
+    assert response.status_code == 200
+    assert response.json()["expired"] is False
