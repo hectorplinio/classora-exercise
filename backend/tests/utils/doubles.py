@@ -28,3 +28,13 @@ class FixedClock(ClockInterface):
 
     def now(self) -> datetime:
         return self._now
+
+
+class TickingClock(ClockInterface):
+    """Returns the given instants one per call (the last one forever): time passing mid-request."""
+
+    def __init__(self, *instants: datetime) -> None:
+        self._instants = list(instants)
+
+    def now(self) -> datetime:
+        return self._instants.pop(0) if len(self._instants) > 1 else self._instants[0]

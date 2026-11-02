@@ -20,7 +20,8 @@ class SetTicketDueDateUseCase(SetTicketDueDateUseCaseInterface):
         request.user.require(Permission.TICKETS_UPDATE)
         ticket = get_visible_ticket(self._repository, request.ticket_id, request.user)
 
+        # One reading of the clock per request: the rules and the response see the same day.
         now = self._clock.now()
         updated = ticket.set_due_date(request.due_date, today=now.date(), now=now)
         self._repository.save(updated)
-        return SetTicketDueDateResponse(ticket=updated)
+        return SetTicketDueDateResponse(ticket=updated, today=now.date())

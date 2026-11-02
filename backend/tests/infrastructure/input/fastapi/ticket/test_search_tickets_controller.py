@@ -5,6 +5,7 @@ import pytest
 
 from tests.utils.api import DEVELOPER, SECURITY, api_client
 from tests.utils.builders import TODAY, a_ticket
+from tests.utils.doubles import TickingClock
 from tickets.domain.ticket.model import Severity, Ticket, TicketState
 
 URL = "/api/v1/tickets"
@@ -127,3 +128,16 @@ def test_without_read_permission_is_forbidden() -> None:
 
 def test_without_team_is_unauthorized() -> None:
     assert api_client().get(URL).status_code == 401
+
+
+def test_expiry_uses_one_reading_of_the_clock_even_across_midnight() -> None:
+    # Due today: not expired at 23:59:59, expired one second after midnight.
+    ticket = a_ticket(target_date=TODAY)
+    clock = TickingClock(
+        datetime(2026, 10, 30, 23, 59, 59, tzinfo=UTC), datetime(2026, 10, 31, 0, 0, 1, tzinfo=UTC)
+    )
+
+    body = api_client(ticket, clock=clock).get(URL, headers=DEVELOPER).json()
+
+    # The filter (no expiredOnly) and the flag agree: the ticket was evaluated on the same day.
+    assert [listed["expired"] for listed in body["data"]] == [False]

@@ -41,6 +41,7 @@ class SearchTicketsUseCase(SearchTicketsUseCaseInterface):
 
     def execute(self, request: SearchTicketsRequest) -> SearchTicketsResponse:
         request.user.require(Permission.TICKETS_READ)
+        # One reading of the clock per request: the filter and the response see the same day.
         today = self._clock.now().date()
 
         # Visibility first, so hidden tickets are never returned nor counted.
@@ -56,7 +57,7 @@ class SearchTicketsUseCase(SearchTicketsUseCaseInterface):
             reverse=request.direction is SortDirection.DESC,
         )
         page = ordered[request.offset : request.offset + request.limit]
-        return SearchTicketsResponse(items=page, total_elements=len(matching))
+        return SearchTicketsResponse(items=page, total_elements=len(matching), today=today)
 
     @staticmethod
     def _matches(ticket: Ticket, request: SearchTicketsRequest, today: date) -> bool:

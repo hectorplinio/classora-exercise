@@ -185,11 +185,13 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 
 ## 25. `expired` is computed in the response mapping with the server clock
 
-**Decision.** The REST DTO calls the domain rule `ticket.is_expired(today)` with `today` from the injected `Clock`. The rule keeps a single owner (the domain); the adapter only decides when to evaluate it.
+**Decision.** The REST DTO calls the domain rule `ticket.is_expired(today)`. The rule keeps a single owner (the domain); the adapter only decides when to evaluate it.
+
+`today` comes from the use case response, not from a second reading of the clock: each use case reads the clock once and returns the day it used. Otherwise a request crossing midnight (UTC) could filter with one day and flag `expired` with the next (`expiredOnly=true` returning a ticket with `expired: false`). Controllers do not depend on the `Clock` at all. Covered by API tests with a clock that ticks past midnight between readings.
 
 ## 26. One pagination shape for every list
 
-**Decision.** Every list endpoint is paginated and answers `{data, pagination: {offset, limit, totalElements}}`. The application layer has a generic `Page[T]` (`items`, `total_elements`), so `SearchTicketsResponse = Page[Ticket]`; the REST adapter has a generic `PageResponse[T]` with `from_page(page, offset, limit, item)` mapping each element. `TicketPageResponse` is just `PageResponse[TicketResponse]`.
+**Decision.** Every list endpoint is paginated and answers `{data, pagination: {offset, limit, totalElements}}`. The application layer has a generic `Page[T]` (`items`, `total_elements`), so `SearchTicketsResponse` is a `Page[Ticket]` (plus the `today` of decision 25); the REST adapter has a generic `PageResponse[T]` with `from_page(page, offset, limit, item)` mapping each element. `TicketPageResponse` is just `PageResponse[TicketResponse]`.
 
 **Consequences.** A new list endpoint only defines the DTO of its element; the envelope, field names and pagination fields are always the same.
 
