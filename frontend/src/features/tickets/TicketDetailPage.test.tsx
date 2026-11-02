@@ -89,6 +89,25 @@ test('a profile without tickets.update does not see the action', async () => {
   expect(screen.queryByRole('form', { name: 'Fijar fecha compromiso' })).not.toBeInTheDocument();
 });
 
+test('while the permissions load, no note says they are missing', async () => {
+  selectTeamLead();
+  const ticket = aTicket();
+  server.use(
+    http.get(apiUrl('/me'), async () => {
+      await delay(100);
+      return HttpResponse.json({ team: 'Payments', permissions: ['tickets.read', 'tickets.update'] });
+    }),
+    ...ticketHandlers(ticket),
+  );
+  renderWithProviders(<App />, { route: `/tickets/${ticket.id}` });
+
+  await screen.findByRole('heading', { name: new RegExp(ticket.key) });
+  expect(screen.queryByText(/Necesitas el permiso/)).not.toBeInTheDocument();
+
+  expect(await screen.findByRole('form', { name: 'Fijar fecha compromiso' })).toBeInTheDocument();
+  expect(screen.queryByText(/Necesitas el permiso/)).not.toBeInTheDocument();
+});
+
 test('a profile with tickets.update sets the date and the ticket moves to "En curso"', async () => {
   selectTeamLead();
   const ticket = aTicket({ state: 'REPORTED' });

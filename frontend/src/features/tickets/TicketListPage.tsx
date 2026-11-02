@@ -40,7 +40,7 @@ export function TicketListPage() {
               setFilters({ sort, direction });
             }}
             busy={isPlaceholderData}
-            canSetDueDate={canSetDueDate}
+            canSetDueDate={canSetDueDate === true}
           />
           <Pagination pagination={data.pagination} onChange={setPage} />
         </>

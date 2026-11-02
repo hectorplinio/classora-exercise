@@ -48,7 +48,8 @@ function TicketDetail({ id }: { id: string }) {
           <div className="grid items-start gap-6 lg:grid-cols-3">
             <TicketFields ticket={ticket} />
             <aside className="flex flex-col gap-4">
-              {!canUpdate ? (
+              {/* Nothing until the permissions are known: never a wrong note. */}
+              {canUpdate === undefined ? null : !canUpdate ? (
                 <Note>Necesitas el permiso tickets.update para fijar la fecha compromiso.</Note>
               ) : ticket.state === 'DONE' ? (
                 <Note>El ticket está cerrado: ya no se puede fijar la fecha compromiso.</Note>
