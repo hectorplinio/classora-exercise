@@ -5,6 +5,7 @@ import { formatDate, formatDateTime } from '../../shared/dates.ts';
 import { InboxIcon, LockIcon } from '../../shared/icons.tsx';
 import { ExpiredBadge, SeverityBadge, StateBadge } from './Badges.tsx';
 import { SORT_LABELS } from './labels.ts';
+import { RowDueDateAction } from './RowDueDateAction.tsx';
 
 type Props = {
   tickets: readonly Ticket[];
@@ -12,12 +13,14 @@ type Props = {
   direction: SortDirection;
   onSort: (sort: TicketSortField, direction: SortDirection) => void;
   busy: boolean;
+  /** Shows "Fijar fecha compromiso" in each row (UX only: the backend enforces 403). */
+  canSetDueDate: boolean;
 };
 
-const head = 'px-4 py-2.5 text-left text-xs font-medium tracking-wide text-zinc-500 uppercase';
-const cell = 'px-4 py-3 align-top';
+const head = 'px-3 py-2.5 text-left text-xs font-medium tracking-wide text-zinc-500 uppercase';
+const cell = 'px-3 py-3 align-top';
 
-export function TicketTable({ tickets, sort, direction, onSort, busy }: Props) {
+export function TicketTable({ tickets, sort, direction, onSort, busy, canSetDueDate }: Props) {
   // The detail page links back to the list with the same filters.
   const { search } = useLocation();
   const navigate = useNavigate();
@@ -29,7 +32,7 @@ export function TicketTable({ tickets, sort, direction, onSort, busy }: Props) {
     <div className="card overflow-x-auto">
       <table
         aria-busy={busy}
-        className={`w-full min-w-[56rem] text-sm transition-opacity ${busy ? 'opacity-50' : ''}`}
+        className={`w-full ${canSetDueDate ? 'min-w-[62rem]' : 'min-w-[56rem]'} text-sm transition-opacity ${busy ? 'opacity-50' : ''}`}
       >
         <thead className="border-b border-zinc-200 bg-zinc-50/60">
           <tr>
@@ -47,12 +50,17 @@ export function TicketTable({ tickets, sort, direction, onSort, busy }: Props) {
               Fecha compromiso
             </th>
             {sortable('LAST_MODIFIED')}
+            {canSetDueDate && (
+              <th scope="col" className={head}>
+                Acción
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
           {tickets.length === 0 ? (
             <tr>
-              <td colSpan={8} className="px-4 py-16">
+              <td colSpan={canSetDueDate ? 9 : 8} className="px-4 py-16">
                 <div className="flex flex-col items-center gap-2 text-zinc-400">
                   <InboxIcon />
                   <p className="text-sm text-zinc-500">No hay tickets que cumplan los filtros.</p>
@@ -110,6 +118,17 @@ export function TicketTable({ tickets, sort, direction, onSort, busy }: Props) {
                 <td className={`${cell} whitespace-nowrap tabular-nums text-zinc-500`}>
                   {formatDateTime(ticket.lastModified)}
                 </td>
+                {canSetDueDate && (
+                  // Using the action must not open the detail (the row's click).
+                  <td
+                    className={`${cell} cursor-default whitespace-nowrap`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    <RowDueDateAction ticket={ticket} />
+                  </td>
+                )}
               </tr>
             ))
           )}
