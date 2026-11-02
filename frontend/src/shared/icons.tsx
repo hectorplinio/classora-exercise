@@ -57,6 +57,12 @@ export const ResetIcon = () => (
   </Icon>
 );
 
+export const CloseIcon = () => (
+  <Icon>
+    <path d="M18 6 6 18M6 6l12 12" />
+  </Icon>
+);
+
 export const InboxIcon = () => (
   <Icon className="size-8 shrink-0">
     <path d="M22 12h-6l-2 3h-4l-2-3H2" />

@@ -1,4 +1,5 @@
 import { ErrorMessage } from '../../shared/ErrorMessage.tsx';
+import { useHasPermission } from '../user/useHasPermission.ts';
 import { ExpiredCount } from './ExpiredCount.tsx';
 import { Pagination } from './Pagination.tsx';
 import { TicketFilters } from './TicketFilters.tsx';
@@ -9,6 +10,7 @@ import { useTickets } from './useTickets.ts';
 export function TicketListPage() {
   const { params, setFilters, setPage, reset } = useTicketListParams();
   const { data, error, isPending, isPlaceholderData } = useTickets(params);
+  const canSetDueDate = useHasPermission('tickets.update');
 
   return (
     <section aria-labelledby="tickets-title" className="flex flex-col gap-5">
@@ -38,6 +40,7 @@ export function TicketListPage() {
               setFilters({ sort, direction });
             }}
             busy={isPlaceholderData}
+            canSetDueDate={canSetDueDate}
           />
           <Pagination pagination={data.pagination} onChange={setPage} />
         </>
