@@ -203,8 +203,8 @@ npm run test:e2e
 
 The tests (`frontend/e2e/tickets.spec.ts`) cover the integration scenarios of the statement:
 
-- a profile without `tickets.update` (Developer) does not see "Fijar fecha compromiso";
-- a profile with it (Team lead) sets the due date and the ticket becomes "En curso", in the detail and in the list;
+- a profile without `tickets.update` (Developer) does not see "Fijar fecha compromiso", neither in the detail nor in the rows of the list;
+- a profile with it (Team lead) sets the due date and the ticket becomes "En curso": from the detail (also shown in the list) and from a row of the list (kept after a reload);
 - a restricted ticket of another team (SEC-1128) is listed for Security but not for Developer, and its detail shows "No encontrado".
 
 They run in CI in the `e2e` job; on failure the Playwright report (with traces) is uploaded as an artifact.
@@ -241,7 +241,6 @@ The code, the documentation and the API are in English. The user interface is in
 - **Real authentication.** The contract already declares a bearer scheme; validating a JWT (and deriving team and permissions from its claims) would replace the simulated headers without touching the use cases.
 - **Filtering, sorting and pagination in the database.** The use cases apply visibility, filters and sorting in memory over `list_all()`: simple and identical for both storages, fine for a few thousand tickets. With large volumes the repository port would take a query (filters, sort, page) and the SQLite adapter would translate it to SQL with indexes, keeping visibility as a domain rule expressed in the query.
 - **Migrations** (Alembic) if the SQLite schema starts to change, and a server database if several instances had to share data.
-- **The due date action in each row** of the list, as the React statement suggests: the optimistic hook already updates every cached list.
 - **Automated accessibility checks** (axe) in the end-to-end tests, and more browsers than Chromium.
 - **MSW handlers generated from the contract**, instead of written by hand, so the frontend tests cannot drift from it either.
 - **Observability**: structured logs with a request id, and metrics on the API.

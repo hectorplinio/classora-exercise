@@ -52,9 +52,8 @@ def create_app() -> AsgiApp:
     repository = create_ticket_repository(clock)
     return create_rest_app(
         Dependencies(
-            clock=clock,
             search_tickets=SearchTicketsUseCase(repository, clock),
-            get_ticket=GetTicketUseCase(repository),
+            get_ticket=GetTicketUseCase(repository, clock),
             set_ticket_due_date=SetTicketDueDateUseCase(repository, clock),
         ),
         openapi_document=load_contract(),

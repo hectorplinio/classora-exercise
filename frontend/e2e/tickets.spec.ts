@@ -2,6 +2,7 @@ import { type Page, expect, test } from '@playwright/test';
 
 // Tickets of the backend's deterministic seed.
 const SEC_1024 = { key: 'SEC-1024', id: 'b7c1e0de-6f0a-4f43-9a55-0a2f6c1d8e11' }; // REPORTED, Payments
+const SEC_1120 = { key: 'SEC-1120' }; // REPORTED, Payments
 const SEC_1128 = { key: 'SEC-1128', id: '4eb56f37-4f83-5ced-a2c5-8337b5ac9c02' }; // restricted, Mobile
 
 /** Selects a profile with the header selector and waits until the backend confirms it. */
@@ -23,6 +24,11 @@ test('a profile without tickets.update does not see "Fijar fecha compromiso"', a
   await expect(page.getByRole('heading', { name: new RegExp(SEC_1024.key) })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Usuario actual' })).toContainText('tickets.read');
   await expect(page.getByRole('form', { name: 'Fijar fecha compromiso' })).toHaveCount(0);
+
+  // Nor in the rows of the list.
+  await page.goto('/tickets');
+  await expect(page.getByRole('row', { name: new RegExp(SEC_1024.key) })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Fijar fecha compromiso de/ })).toHaveCount(0);
 });
 
 test('a profile with tickets.update sets the due date and the ticket moves to "En curso"', async ({
@@ -44,6 +50,23 @@ test('a profile with tickets.update sets the due date and the ticket moves to "E
   await page.getByRole('searchbox', { name: 'Buscar' }).fill(SEC_1024.key);
   const row = page.getByRole('row', { name: new RegExp(SEC_1024.key) });
   await expect(row).toContainText('En curso');
+});
+
+test('a profile with tickets.update sets the due date from a row of the list', async ({ page }) => {
+  await selectProfile(page, 'team-lead', 'Payments');
+  await page.goto(`/tickets?q=${SEC_1120.key}`);
+  const row = page.getByRole('row', { name: new RegExp(SEC_1120.key) });
+  await expect(row).toContainText('Reportado');
+
+  await row.getByRole('button', { name: `Fijar fecha compromiso de ${SEC_1120.key}` }).click();
+  await row.getByLabel('Fecha compromiso', { exact: true }).fill('2099-02-20');
+  await row.getByRole('button', { name: 'Guardar' }).click();
+
+  await expect(row).toContainText('En curso');
+  await expect(row).toContainText('20/02/2099');
+  // Saved on the server: still there after a reload.
+  await page.reload();
+  await expect(page.getByRole('row', { name: new RegExp(SEC_1120.key) })).toContainText('En curso');
 });
 
 test('a restricted ticket of another team is not listed and its detail is not found', async ({

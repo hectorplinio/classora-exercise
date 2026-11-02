@@ -185,11 +185,13 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 
 ## 25. `expired` is computed in the response mapping with the server clock
 
-**Decision.** The REST DTO calls the domain rule `ticket.is_expired(today)` with `today` from the injected `Clock`. The rule keeps a single owner (the domain); the adapter only decides when to evaluate it.
+**Decision.** The REST DTO calls the domain rule `ticket.is_expired(today)`. The rule keeps a single owner (the domain); the adapter only decides when to evaluate it.
+
+`today` comes from the use case response, not from a second reading of the clock: each use case reads the clock once and returns the day it used. Otherwise a request crossing midnight (UTC) could filter with one day and flag `expired` with the next (`expiredOnly=true` returning a ticket with `expired: false`). Controllers do not depend on the `Clock` at all. Covered by API tests with a clock that ticks past midnight between readings.
 
 ## 26. One pagination shape for every list
 
-**Decision.** Every list endpoint is paginated and answers `{data, pagination: {offset, limit, totalElements}}`. The application layer has a generic `Page[T]` (`items`, `total_elements`), so `SearchTicketsResponse = Page[Ticket]`; the REST adapter has a generic `PageResponse[T]` with `from_page(page, offset, limit, item)` mapping each element. `TicketPageResponse` is just `PageResponse[TicketResponse]`.
+**Decision.** Every list endpoint is paginated and answers `{data, pagination: {offset, limit, totalElements}}`. The application layer has a generic `Page[T]` (`items`, `total_elements`), so `SearchTicketsResponse` is a `Page[Ticket]` (plus the `today` of decision 25); the REST adapter has a generic `PageResponse[T]` with `from_page(page, offset, limit, item)` mapping each element. `TicketPageResponse` is just `PageResponse[TicketResponse]`.
 
 **Consequences.** A new list endpoint only defines the DTO of its element; the envelope, field names and pagination fields are always the same.
 
@@ -289,6 +291,7 @@ Short ADR-style notes. Each entry: context, decision, consequences.
 - The form (React Hook Form) checks that the date is not before today in the user's calendar, for quick feedback; the server, which uses its own clock, has the last word.
 - After saving, the ticket the server returns replaces the cached detail (so it shows "En curso" at once), and every cached list of the profile is invalidated, because the new state or date can change which tickets match a filter and in which order. The update was later made optimistic (decision 43).
 - The link from the list to the detail carries the list's query string in the navigation state, so "Volver al listado" keeps the filters.
+- The action is also in each row of the list (React statement, question 3): an "Acción" column, only with `tickets.update`, with a button that opens an inline date field. Same hook and same date rules (`dueDateRules`) as the detail form. Clicks inside that cell do not open the detail, and closing the editor gives the focus back to the button.
 
 ## 41. 100% test coverage on both sides
 
