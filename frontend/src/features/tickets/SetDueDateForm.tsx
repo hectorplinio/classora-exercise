@@ -5,11 +5,8 @@ import { ApiError } from '../../api/client.ts';
 import type { Ticket } from '../../api/generated/types.gen.ts';
 import { ErrorMessage } from '../../shared/ErrorMessage.tsx';
 import { today } from '../../shared/dates.ts';
+import { type DueDateFormValues, PAST_DATE, dueDateRules } from './dueDateRules.ts';
 import { useSetDueDate } from './useSetDueDate.ts';
-
-type FormValues = { dueDate: string };
-
-const PAST_DATE = 'La fecha no puede ser anterior a hoy.';
 
 /** A 422 that the server explains for the date field (`invalidParams`). */
 function rejectsDueDate(error: unknown): boolean {
@@ -32,7 +29,7 @@ export function SetDueDateForm({ ticket }: { ticket: Ticket }) {
     handleSubmit,
     setError,
     formState: { errors },
-  } = useForm<FormValues>({ defaultValues: { dueDate: ticket.dueDate ?? '' } });
+  } = useForm<DueDateFormValues>({ defaultValues: { dueDate: ticket.dueDate ?? '' } });
   const minDate = today();
 
   return (
@@ -67,11 +64,7 @@ export function SetDueDateForm({ ticket }: { ticket: Ticket }) {
           aria-invalid={errors.dueDate ? true : undefined}
           aria-describedby={errors.dueDate ? 'due-date-error' : undefined}
           className="field aria-invalid:border-red-500"
-          {...register('dueDate', {
-            required: 'Indica una fecha.',
-            // YYYY-MM-DD strings compare like dates.
-            validate: (value) => value >= minDate || PAST_DATE,
-          })}
+          {...register('dueDate', dueDateRules(minDate))}
         />
       </label>
       {errors.dueDate && (
