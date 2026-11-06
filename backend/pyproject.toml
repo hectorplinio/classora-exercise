@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.13.6,<0.14.0"]
+requires = ["uv_build>=0.13.7,<0.14.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
@@ -25,8 +25,8 @@ dev = [
     "pytest>=9.2.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.17.3",
-    "schemathesis>=4.32.7",
-    "types-pyyaml>=6.0.12.20261030",
+    "schemathesis>=4.33.0",
+    "types-pyyaml>=6.0.12.20261103",
 ]
 
 [tool.ruff]
