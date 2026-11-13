@@ -8,25 +8,25 @@ authors = [
 requires-python = ">=3.11"
 dependencies = [
     "email-validator>=2.3.0",
-    "fastapi>=0.162.0",
+    "fastapi>=0.162.2",
     "pyyaml>=6.0.3",
     "uvicorn>=0.54.0",
 ]
 
 [build-system]
-requires = ["uv_build>=0.13.6,<0.14.0"]
+requires = ["uv_build>=0.13.7,<0.14.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
     "httpx2>=2.16.0",
-    "import-linter>=2.15",
+    "import-linter>=2.16",
     "mypy>=2.4.1",
     "pytest>=9.2.0",
     "pytest-cov>=7.0.0",
-    "ruff>=0.17.3",
-    "schemathesis>=4.32.7",
-    "types-pyyaml>=6.0.12.20261030",
+    "ruff>=0.17.4",
+    "schemathesis>=4.33.1",
+    "types-pyyaml>=6.0.12.20261103",
 ]
 
 [tool.ruff]
